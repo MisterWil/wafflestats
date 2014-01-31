@@ -8,13 +8,10 @@ var https = require("https");
  */
 exports.getJSON = function(options, onResult)
 {
-    console.log("rest::getJSON");
-
     var prot = options.port == 443 ? https : http;
     var req = prot.request(options, function(res)
     {
         var output = '';
-        console.log(options.host + ':' + res.statusCode);
         res.setEncoding('utf8');
 
         res.on('data', function (chunk) {

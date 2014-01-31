@@ -1,6 +1,56 @@
 extends layout
 
 block content
-	h1= title
+	div#header
+		h1= title
+		
+	div#toolbar
+		table
+			tr
+				th Last Update:
+				td#lastUpdate Never
+				
 	div#content
-	div#userGraph(style="height:80%;width:100%;")
+		div#bitcoinAddressForm
+			p Pulls stats from the WafflePool API once every 30 seconds.
+				br
+				| Please enter your bitcoin address to continue.
+			form(name="stats", action="/", method="get")
+				table
+					tr
+						td Bitcoin Address:
+						td
+							input(type="text", name="address")
+					tr
+						td(colspan=2)
+							input(type="submit", value="Go")
+		
+		div#stats
+			div#hashrateStats
+				table
+					tr
+						td
+							div#hashRateMeter(style="width: 250px; height: 170px; position: relative;")
+							div#hashRate(style="sitch: 100%; text-align: center; position: relative; top: -20px;")
+						td
+							div#hashRateGraph(style="width: 800px; height: 170px; position: relative; align: right;")
+								
+			div#unsentBalanceStats
+				table
+					tr
+						td
+							div#currentBalances(style="width: 250px; height: 170px; position: relative;")
+								div.title(style="text-align: center;")
+									| Current Balances
+								table.balances(style="margin: 0 auto;")
+									tr
+										th Sent:
+										td#sent ฿ 0.000000
+									tr
+										th Confirmed:
+										td#confirmed ฿ 0.000000
+									tr
+										th Unconverted:
+										td#unconverted ฿ 0.000000
+						td
+							div#balancesGraph(style="width: 800px; height: 170px; position: relative; align: right;")

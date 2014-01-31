@@ -4,5 +4,5 @@
  */
 
 exports.index = function(req, res){
-  res.render('index', { title: 'WAFFLEStats' });
+  res.render('index', { title: 'WAFFLEStats [Live]' });
 };

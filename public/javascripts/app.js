@@ -1,101 +1,169 @@
-var sentBal = [];
+// Hashrate Storage Array [timestamp, hashrate]
+var hashrate = [];
+
+// Confirmed and Unconverted Bitcoins Storage Array [timestamp, bitcoin value]
 var confirmedBal = [];
 var unconvertedBal = [];
-var hashrate = [];
-var plot1 = null;
 
-$(window).on("resize", function() {
-	plot1.resetAxesScale();
-	plot1.replot();
-});
+// Sent Bitcoins Storage Array [timestamp, bitcoin value]
+var sentBal = [];
+
+// Meters
+var hashRateMeter = null;
+var hashRateGraph = null;
+var balancesGraph = null;
+
+// Last data update
+var lastUpdate = null;
+
+// Bitcoin address
+var address = null;
 
 $(document).ready(function() {
-	startUpdate();
-
-	var minDate = new Date();
-	minDate.setDate(minDate.getDate() - 1);
-		
-	// create the chart
-	plot1 = $.jqplot('userGraph', [ [ null ], [ null ], [ null ], [ null ] ], {
-		title : 'User Data',
-		series : [ {
-			label : 'Sent',
-			color: 'rgba(61, 61, 255, 1)'
-		}, {
-			label : 'Confirmed Balance',
-			color: 'rgba(61, 255, 61, 1)'
-		}, {
-			label : 'Unconverted Balance',
-			color: 'rgba(255, 255, 61, 1)'
-		}, {
-			label : 'Hashrate',
-			yaxis : 'y2axis',
-			color: 'rgba(255, 61, 61, 1)'
-		} ],
-		// Show the legend and put it outside the grid, but inside the
-		// plot container, shrinking the grid to accomodate the legend.
-		// A value of "outside" would not shrink the grid and allow
-		// the legend to overflow the container.
-		legend : {
-			show : true,
-			placement : 'outsideGrid'
-		},
-		axes : {
-			xaxis : {
-				renderer : $.jqplot.DateAxisRenderer,
-				tickRenderer: $.jqplot.CanvasAxisTickRenderer,
-				tickOptions : {
-					formatString : '%b %#d %H:%M',
-					angle: -45
-				},
-				tickInterval : '30 second'
-			},
-			yaxis : {
-				tickOptions : {
-					formatString : '฿ %.6f'
-				}
-			},
-			y2axis : {
-				labelRenderer : $.jqplot.CanvasAxisLabelRenderer,
-				label : 'Hashrate',
-				tickOptions : {
-					formatString : '%.2f kH/s'
+	
+	address = $.getUrlVar('address');
+	
+	if (address === undefined) {
+		$("#stats").hide();
+	} else {
+		$("#bitcoinAddressForm").hide();
+		// Create hashrate Meter
+		hashRateMeter = $.jqplot('hashRateMeter', [ [ 1 ] ], {
+			title : 'Current Hashrate',
+			seriesDefaults : {
+				renderer : $.jqplot.MeterGaugeRenderer,
+				rendererOptions : {
+					label : 'kH/s'
 				}
 			}
-		},
-		highlighter : {
-			show : true,
-			sizeAdjust : 7.5
-		},
-		cursor : {
-			show : false
-		}
-	});
-
-	 var interval = self.setInterval(function() { startUpdate(); }, 30000);
+		});
+		
+		// Create hashrate graph
+		hashRateGraph = $.jqplot('hashRateGraph', [ [ null ] ], {
+			title : 'Hashrate History',
+			series : [ {
+				label : 'Hashrate',
+				color : 'rgba(255, 61, 61, 1)'
+			} ],
+			axesDefaults : {
+				pad : 1.2
+			},
+			axes : {
+				xaxis : {
+					renderer : $.jqplot.DateAxisRenderer,
+					tickRenderer : $.jqplot.CanvasAxisTickRenderer,
+					tickOptions : {
+						formatString : '%H:%M:%S',
+					},
+					tickInterval : '10 minute'
+				},
+				yaxis : {
+					tickOptions : {
+						formatString : '%.2f kH/s'
+					}
+				}
+			},
+			highlighter : {
+				show : true,
+				sizeAdjust : 7.5
+			},
+			cursor : {
+				show : false
+			}
+		});
+		
+		// create balances graph
+		balancesGraph = $.jqplot('balancesGraph', [ [ null ], [ null ] ], {
+			title : 'Balance History',
+			series : [ {
+				label : 'Confirmed',
+				color : 'rgba(61, 255, 61, 1)'
+			}, {
+				label : 'Unconverted',
+				color : 'rgba(255, 255, 61, 1)'
+			} ],
+			axesDefaults : {
+				pad : 1.2
+			},
+			axes : {
+				xaxis : {
+					renderer : $.jqplot.DateAxisRenderer,
+					tickRenderer : $.jqplot.CanvasAxisTickRenderer,
+					tickOptions : {
+						formatString : '%H:%M:%S',
+					},
+					tickInterval : '10 minute'
+				},
+				yaxis : {
+					tickOptions : {
+						formatString : '฿ %.6f'
+					}
+				},
+			},
+			legend : {
+				show : true,
+				placement : 'outside'
+			},
+			highlighter : {
+				show : true,
+				sizeAdjust : 7.5
+			},
+			cursor : {
+				show : false
+			}
+		});
+		
+		startUpdate();
+		
+		var interval = self.setInterval(function() {
+			startUpdate();
+		}, 30000);
+		
+	}
 });
 
 function startUpdate() {
-	var address = $.getUrlVar('address');
-	
-	if (address === undefined) {
-		$('#content').html('Please provide an address via ?address=<address>');
-	} else {
+	if (address != undefined) {
 		var url = '/temp-api/' + address;
 		$.getJSON(url, function(data) {
-			var date = new Date().getTime();
-			sentBal.push([date, parseFloat(data.balances.sent)]);
-			confirmedBal.push([date, parseFloat(data.balances.confirmed)]);
-			unconvertedBal.push([date, parseFloat(data.balances.unconverted)]);
 			
+			lastUpdate = new Date().getTime();
+			
+			var sentBalance = parseFloat(data.balances.sent);
+			var confirmedBalance = parseFloat(data.balances.confirmed);
+			var unconvertedBalance = parseFloat(data.balances.unconverted);
+
+			sentBal.push([ lastUpdate, sentBalance ]);
+			confirmedBal.push([ lastUpdate, confirmedBalance ]);
+			unconvertedBal.push([ lastUpdate, unconvertedBalance ]);
+
 			var rawHR = parseInt(data.hash_rate);
 			var khashrate = rawHR / 1000.0;
-			hashrate.push([date, khashrate]);
+			hashrate.push([ lastUpdate, khashrate ]);
 
-			var series = [sentBal, confirmedBal, unconvertedBal, hashrate];
+			hashRateMeter.resetAxesScale();
+			hashRateMeter.replot({
+				data : [ [ khashrate ] ]
+			});
+
+			hashRateGraph.resetAxesScale();
+			hashRateGraph.replot({
+				data : [ hashrate ]
+			});
+
+			$('#hashRate').html(sprintf("%.2f kH/s", khashrate));
+
+			balancesGraph.resetAxesScale();
+			balancesGraph.replot({
+				data : [ confirmedBal, unconvertedBal ]
+			});
+
+			$('#sent').html(sprintf("฿ %.6f", sentBalance));
+			$('#confirmed').html(sprintf("฿ %.6f", confirmedBalance));
+			$('#unconverted').html(sprintf("฿ %.6f", unconvertedBalance));
 			
-			plot1.resetAxesScale();
-			plot1.replot({data:series});
+			$('#lastUpdate').html(new Date(lastUpdate).toLocaleString());
+
 		});
 	}
 };

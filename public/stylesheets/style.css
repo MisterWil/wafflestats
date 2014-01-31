@@ -7,6 +7,26 @@ body, html {
     height: 100%;
 }
 
+.title {
+	color: #666666;
+	font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+	padding-bottom: 0.5em;
+	font-size: 1.2em;
+}
+
+.balances th {
+	text-align: left;
+}
+
+#hashrateStats, #unsentBalanceStats {
+	padding-bottom: 30px;
+}
+
+#toolbar {
+	position: relative;
+	float: right;
+}
+
 a {
   color: #00B7FF;
 }
