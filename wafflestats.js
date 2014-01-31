@@ -5,11 +5,15 @@
 
 var express = require('express');
 var routes = require('./routes');
-var tempapi = require('./routes/tempapi');
 var http = require('http');
 var path = require('path');
 
-var app = express();
+var app = module.exports = express();
+
+var tempapi = require('./routes/tempapi')(app);
+
+// Version info
+app.set('wafflesVersion', '0.2');
 
 // all environments
 app.set('port', process.env.PORT || 3000);

@@ -1,56 +1,30 @@
 extends layout
 
 block content
+	div#versionOutOfDate Your current version is out of date. Refresh to update.
+	
 	div#header
-		h1= title
+		span.title WAFFLES
+		span.subtitle tats
+		div.status
+			span [
+			span#status welcome
+			span ]
 		
-	div#toolbar
-		table
-			tr
-				th Last Update:
-				td#lastUpdate Never
-				
 	div#content
-		div#bitcoinAddressForm
-			p Pulls stats from the WafflePool API once every 30 seconds.
-				br
-				| Please enter your bitcoin address to continue.
-			form(name="stats", action="/", method="get")
-				table
-					tr
-						td Bitcoin Address:
-						td
-							input(type="text", name="address")
-					tr
-						td(colspan=2)
-							input(type="submit", value="Go")
+		div#welcomePage(style="display: none;")
+			include welcomePage
 		
-		div#stats
-			div#hashrateStats
-				table
-					tr
-						td
-							div#hashRateMeter(style="width: 250px; height: 170px; position: relative;")
-							div#hashRate(style="sitch: 100%; text-align: center; position: relative; top: -20px;")
-						td
-							div#hashRateGraph(style="width: 800px; height: 170px; position: relative; align: right;")
-								
-			div#unsentBalanceStats
-				table
-					tr
-						td
-							div#currentBalances(style="width: 250px; height: 170px; position: relative;")
-								div.title(style="text-align: center;")
-									| Current Balances
-								table.balances(style="margin: 0 auto;")
-									tr
-										th Sent:
-										td#sent ฿ 0.000000
-									tr
-										th Confirmed:
-										td#confirmed ฿ 0.000000
-									tr
-										th Unconverted:
-										td#unconverted ฿ 0.000000
-						td
-							div#balancesGraph(style="width: 800px; height: 170px; position: relative; align: right;")
+		div#waffleStats(style="display: none;")
+			div#userStats
+				include userStats
+				
+	div#donate Donate BTC @ 1P1pqpsGz6zvoNc6FB1cBxrWQw6mxDGgyh
+			
+	div#footer
+		span Created by Wil Schrader
+		span MisterWil on Reddit
+		span Wil on irc.freenode.net / ##wafflepool
+		span.reverse moc.liamg@
+			span.obv ilikebutts
+			| redarliw

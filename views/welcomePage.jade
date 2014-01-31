@@ -1,0 +1,13 @@
+p Pulls stats from the WafflePool API once every 30 seconds.
+	br
+	| Please enter your bitcoin address to continue.
+	
+form(name="stats", action="/", method="get")
+	table
+		tr
+			td Bitcoin Address:
+			td
+				input(type="text", name="address")
+		tr
+			td(colspan=2)
+				input(type="submit", value="Go")

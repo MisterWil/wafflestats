@@ -1,0 +1,53 @@
+div#toolbar
+	div#lastUpdated
+		span.key Last Updated:&nbsp;
+		span#lastUpdatedValue Never
+	div#controls
+		a(href="#" id="start") [start]
+		| &nbsp;
+		a(href="#" id="stop") [pause]
+	
+div#hashRate.section
+	table
+		tr
+			th.sectionHeader Current Hash Rate
+			th.sectionHeader Historical Hash Rate
+				
+		tr
+			td#currentHashRate
+				div#hashRateMeter
+			
+			td#historicalHashRate
+				div#hashRateGraph
+				div#hashRateStats
+					span#minimumHashRate
+						span.key Minimum:
+						span#minimumHashRateValue 0.0 kH/s
+					span#averageHashRate
+						span.key Average:
+						span#averageHashRateValue 0.0 kH/s
+					span#maximumHashRate
+						span.key Maximum:
+						span#maximumHashRateValue 0.0 kH/s
+
+div#balances.section
+	table
+		tr
+			th.sectionHeader Current Balances
+			th.sectionHeader Historical Balances
+						
+		tr
+			td#currentBalances
+				table
+					tr
+						th Sent:
+						td#sentBalance ฿ 0.00000000
+					tr
+						th Confirmed:
+						td#confirmedBalance ฿ 0.00000000
+					tr
+						th Unconverted:
+						td#unconvertedBalance ฿ 0.00000000
+						
+			td#historicalBalances
+				div#balancesGraph
