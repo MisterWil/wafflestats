@@ -12,14 +12,16 @@ var hashRateGraph = null;
 var balancesGraph = null;
 var graphs = [ hashRateMeter, hashRateGraph, balancesGraph ];
 
-// Last data update
-var lastUpdate = 0;
+// Data range values
+var firstValue = new Date();
+var lastUpdate = new Date(0);
 
 // Storage for initial running version
 var wafflesVersion = null;
 
 // API proxy address and Bitcoin address
-var url = '/temp-api/';
+var currentURL = '/current/';
+var historicalURL = '/historical/';
 var address = null;
 
 // Interval object storage and setup
@@ -139,6 +141,8 @@ $(document).ready(function() {
 		$("#waffleStats").show();
 
 		initGraphs();
+		
+		getHistoricalData();
 
 		startInterval();
 	}
@@ -169,26 +173,57 @@ function initGraphs() {
 			graphDefaults, balanceHistoryGraphConfig));
 };
 
+function getHistoricalData() {
+	if (address != undefined) {
+		$.getJSON(historicalURL + address, function(historical) {
+			if (historical !== undefined && historical.length > 0) {
+				var histLen = historical[0].data.length;
+				
+				for (var i = 0; i < histLen; i++) {
+					var data = historical[0].data[i];
+					var date = new Date(data.retrieved);
+					
+					updateGraphDataArrays(new Date(data.retrieved), data);
+					
+					if (date.getTime() < firstValue.getTime()) {
+						firstValue = date;
+					}
+				}
+			}
+		});
+	}
+}
+
 function doUpdate() {
 	if (address != undefined) {
-		$.getJSON(url + address, function(data) {
+		$.getJSON(currentURL + address, function(data) {
 
-			lastUpdate = new Date().getTime();
-			
-			performVersionCheck(data);
+			if (data !== undefined && data.error == "" || data.error === undefined) {
+				lastUpdate = new Date();
 
-			updateGraphDataArrays(data);
+				hideError();
 
-			replotGraphs();
+				performVersionCheck(data);
+				
+				var formatted = formatAPIValues(data);
 
-			updateValues();
+				updateGraphDataArrays(lastUpdate, formatted);
+
+				replotGraphs();
+
+				updateValues();
+			} else {
+				showError(data.error);
+			}
+		}).error(function() {
+			showError('Local server is unreachable.');
 		});
 	}
 };
 
 function performVersionCheck(data) {
 	var rcvdVersion = data.wafflesVersion;
-	console.log(wafflesVersion + " - " + rcvdVersion);
+	
 	if (wafflesVersion === null) {
 		wafflesVersion = rcvdVersion;
 	} else {
@@ -199,18 +234,24 @@ function performVersionCheck(data) {
 	
 }
 
-function updateGraphDataArrays(data) {
-	var sentBalance = parseFloat(data.balances.sent);
-	var confirmedBalance = parseFloat(data.balances.confirmed);
-	var unconvertedBalance = parseFloat(data.balances.unconverted);
+function formatAPIValues(data) {
+	return {
+		hashRate: parseInt(data.hash_rate),
+		balances: {
+			sent: parseFloat(data.balances.sent),
+			confirmed: parseFloat(data.balances.confirmed),
+			unconverted: parseFloat(data.balances.unconverted)
+		}
+	};
+}
 
-	sentBal.push([ lastUpdate, sentBalance ]);
-	confirmedBal.push([ lastUpdate, confirmedBalance ]);
-	unconvertedBal.push([ lastUpdate, unconvertedBalance ]);
+function updateGraphDataArrays(date, data) {
+	sentBal.push([ date, data.balances.sent ]);
+	confirmedBal.push([ date, data.balances.confirmed ]);
+	unconvertedBal.push([ date, data.balances.unconverted ]);
 
-	var rawHR = parseInt(data.hash_rate);
-	var khashrate = rawHR / 1000.0;
-	hashrate.push([ lastUpdate, khashrate ]);
+	var khashrate = data.hashRate / 1000.0;
+	hashrate.push([ date, khashrate ]);
 }
 
 function replotGraphs() {
@@ -277,26 +318,24 @@ function getTickValues() {
 	var values = ['1 minute', '%H:%M:%S'];
 	
 	if (hashrate.length > 0) {
-		var startTimestamp = hashrate[0][0];
-		var endTimestamp = hashrate.last()[0];
+		var startTimestamp = firstValue.getTime();
+		var endTimestamp = lastUpdate.getTime();
 		
 		var totalTime = endTimestamp - startTimestamp;
 		
-		var hours=(totalTime/(1000*60*60))%24;
-		var minutes=(totalTime/(1000*60))%60;
+		var hours=(totalTime/(1000*60*60));
+		var minutes=(totalTime/(1000*60));
 
 		if (hours > 72) {
-			values = ['1 day', '%H:%M:%S'];
+			values = ['1 day', '%b %d %H:%M:%S'];
 		} else if (hours > 24) {
 			values = ['12 hours', '%b %d %H:%M:%S'];
 		} else if (hours > 5) {
 			values = ['6 hours', '%H:%M:%S'];
-		} else if (minutes > 60) {
-			values = ['1 hour', '%H:%M:%S'];
-		} else if (minutes > 30) {
-			values = ['30 minute', '%H:%M:%S'];
-		} else if (minutes > 10) {
-			values = ['10 minute', '%H:%M:%S'];
+		} else if (minutes > 59) {
+			values = ['60 minutes', '%H:%M:%S'];
+		} else if (minutes > 25) {
+			values = ['10 minutes', '%H:%M:%S'];
 		} else if (minutes > 5) {
 			values = ['5 minute', '%H:%M:%S'];
 		}
@@ -312,7 +351,7 @@ function updateValues() {
 	$('#confirmedBalance').html(sprintf(bitcoinFormatString, confirmedBal.last()[1]));
 	$('#unconvertedBalance').html(sprintf(bitcoinFormatString, unconvertedBal.last()[1]));
 
-	$('#lastUpdatedValue').html(new Date(lastUpdate).toLocaleString());
+	$('#lastUpdatedValue').html(lastUpdate.toLocaleString());
 }
 
 function updateHashrateMetrics() {
@@ -340,11 +379,22 @@ function updateHashrateMetrics() {
 	}
 }
 
+function showError(error) {
+	$('#error').html(error);
+	$('#error').slideDown("slow");
+}
+
+function hideError() {
+	if ($('#error').is(":visible")) {
+		$('#error').slideUp("slow");
+	}
+}
+
 function startInterval() {
 	if (intervalId == 0) {
 		
 		// Prevent rapid pinging of stop->start to force updates
-		var milliSinceLastUpdate = new Date().getTime() - lastUpdate;
+		var milliSinceLastUpdate = new Date().getTime() - lastUpdate.getTime();
 		if (milliSinceLastUpdate > 10000) {
 			doUpdate();
 		}
