@@ -19,7 +19,7 @@ var historical = require('./routes/historical')(app);
 
 app.configure(function() {
 	// Waffles Version Info
-	app.set('wafflesVersion', '0.2');
+	app.set('wafflesVersion', '0.3');
 
 	// all environments
 	app.set('port', process.env.PORT || 3000);
