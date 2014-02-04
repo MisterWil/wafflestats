@@ -24,7 +24,7 @@ var writeCount = 1;
 History.collection.drop(function (err) {
 
 	// Upgrade the entire address table
-	Address.find(function(err, addresses) {
+	Address.find({}, function(err, addresses) {
 		if (err) {
 			writeCount = 0;
 			log.error(err);
