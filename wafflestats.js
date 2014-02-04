@@ -50,13 +50,8 @@ app.configure('test', function() {
 });
 
 app.configure('production', function() {
-	app.use(express.errorHandler());
-	app.locals.pretty = true;
 	mongoose.connect('mongodb://localhost/waffles');
 });
-
-// Perform v0.3 history conversion
-require('./plugins/historyCleanup')();
 
 // Setup routes
 app.get('/', routes.index);
