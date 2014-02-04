@@ -1,4 +1,4 @@
-var models = ['./Address.js'];
+var models = ['./Address.js', './History.js'];
 
 exports.initialize = function() {
     var l = models.length;

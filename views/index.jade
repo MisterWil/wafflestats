@@ -3,6 +3,7 @@ extends layout
 block content
 	div#versionOutOfDate Your current version is out of date. Refresh to update.
 	div#error
+	div#loading
 	
 	div#header
 		span.title WAFFLES
@@ -15,7 +16,7 @@ block content
 	div#content
 		div#welcomePage(style="display: none;")
 			include welcomePage
-		
+
 		div#waffleStats(style="display: none;")
 			div#userStats
 				include userStats

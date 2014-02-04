@@ -3,7 +3,7 @@ var log = require('../log');
 var extend = require("xtend");
 
 var mongoose = require('mongoose');
-var Address = mongoose.model('Address');
+var History = mongoose.model('History');
 
 var options = {
 	host : 'wafflepool.com',
@@ -15,47 +15,77 @@ var options = {
 	}
 };
 
-module.exports = function(app) {
+/*
+ * Expire cached data every X seconds.
+ * This is to prevent people from pinging the remote API
+ * too often by injecting changes into the client side app.
+ */
+var expireSeconds = 30;
+
+module.exports = function(app, rclient) {
 	var routes = {};
 
 	routes.temp_api = function(req, res) {
-		// Setup API path for remote json call
 		if (req.params.address != undefined) {
-			options.path = options.apiPath + '?address=' + req.params.address;
+			
+			// Check if we have a value cached already
+			rclient.get(req.params.address, function (err, result) {
+				if (result) {
+					// Send cached result
+					return res.send(JSON.parse(result));
+				}
+				
+				// Ping the API
+				retrieveData(req, res);
+			});
+			
 		} else {
-			options.path = options.apiPath;
+			onError(req, res, null, "BTC Address Missing");
 		}
-
-		// Retrieve the data
+	};
+	
+	function retrieveData(req, res) {
+		options.path = options.apiPath + '?address=' + req.params.address;
+		
 		rest.getJSON(options, function(statusCode, result) {
 			res.statusCode = statusCode;
 			
 			if (statusCode == 200) {
 				onSuccess(req, res, result);
 			} else {
-				onError(req, res, 'API Returned Status Code: ' + statusCode);
+				onError(req, res, 'HTTP status code: ' + statusCode, "Remote API Unreachable");
 			}
 		},
 		function (err) {
-			onError(req, res, err);
+			onError(req, res, err, "Remote API Unreachable");
 		});
-	};
+	}
 	
 	function onSuccess(req, res, result) {
-		// Inject custom version info
-		var version = {
-			wafflesVersion : app.get('wafflesVersion')
+		// Inject custom version info & cacheID
+		var inject = {
+			wafflesVersion : app.get('wafflesVersion'),
+			cacheID : guid()
 		};
-		result = extend(version, result);
+		result = extend(inject, result);
 		
+		cacheResult(req.params.address, result);
 		saveHistorical(req.params.address, result);
-
+		
 		res.send(result);
 	}
 
-	function onError(req, res, err) {
-		log.error(err);
-		res.send({ error: "Failed to call remote API!" });
+	function onError(req, res, err, errStr) {
+		if (err) {
+			log.error(err);
+		}
+		
+		res.send({ error: errStr });
+	}
+	
+	function cacheResult(address, result) {
+		rclient.set(address, JSON.stringify(result));
+		rclient.expire(address, expireSeconds);
 	}
 
 	return routes;
@@ -63,28 +93,31 @@ module.exports = function(app) {
 
 function saveHistorical(address, data) {
 	if (data !== undefined && data.hash_rate !== undefined) {
-		var dataArray = {
-				wafflesVersion: data.wafflesVersion,
+		var hist = {
+				address: address,
 				hashRate: parseInt(data.hash_rate),
 				balances: {
 					sent: parseFloat(data.balances.sent),
 					confirmed: parseFloat(data.balances.confirmed),
 					unconverted: parseFloat(data.balances.unconverted)
 				}
-		}
-	
-		Address.update({
-			address : address
-		}, {
-			$pushAll : {
-				data : [dataArray]
-			}
-		}, {
-			upsert : true
-		}, function(err) {
+			};
+		
+		History.create(hist, function (err) {
 			if (err) {
-				log.error(err);
+				return log.err(err);
 			}
 		});
 	}
+}
+
+function s4() {
+  return Math.floor((1 + Math.random()) * 0x10000)
+             .toString(16)
+             .substring(1);
+};
+
+function guid() {
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
+         s4() + '-' + s4() + s4() + s4();
 }

@@ -6,6 +6,13 @@ var sentBal = [];
 var confirmedBal = [];
 var unconvertedBal = [];
 
+// Temporary historical storage arrays
+var loadHistory = false;
+var sentBalHist = [];
+var confirmedBalHist = [];
+var unconvertedBalHist = [];
+var hashrateHist = [];
+
 // Graphs
 var hashRateMeter = null;
 var hashRateGraph = null;
@@ -16,6 +23,9 @@ var graphs = [ hashRateMeter, hashRateGraph, balancesGraph ];
 var firstValue = new Date();
 var lastUpdate = new Date(0);
 
+// Last result cacheID
+var cacheID = null;
+
 // Storage for initial running version
 var wafflesVersion = null;
 
@@ -24,9 +34,10 @@ var currentURL = '/current/';
 var historicalURL = '/historical/';
 var address = null;
 
-// Interval object storage and setup
+// Interval object storage, how often to update, and how often to query the API
 var intervalId = 0;
-var updateInterval = 30000;
+var updateInterval = 1000 * 5; // Set to 5 seconds until history is loaded
+var apiInterval = 1000 * 60;
 
 // Format Strings
 var hashrateFormatString = "%.2f kH/s";
@@ -175,51 +186,79 @@ function initGraphs() {
 
 function getHistoricalData() {
 	if (address != undefined) {
-		$.getJSON(historicalURL + address, function(historical) {
-			if (historical !== undefined && historical.length > 0) {
-				var histLen = historical[0].data.length;
-				
-				for (var i = 0; i < histLen; i++) {
-					var data = historical[0].data[i];
-					var date = new Date(data.retrieved);
-					
-					updateGraphDataArrays(new Date(data.retrieved), data);
-					
-					if (date.getTime() < firstValue.getTime()) {
-						firstValue = date;
-					}
-				}
+		$.getJSON(historicalURL + address, function(history) {
+			if (history !== undefined && history.length > 0) {
+				prepareHistoricalData(history);
+			} else {
+				// Reset the interval (timer) to only run as often as the API updates
+				resetInterval(apiInterval);
 			}
 		});
 	}
 }
 
+function prepareHistoricalData(history) {
+	showLoading('Loading historical data...');
+	
+	var histLen = history.length;
+
+	for (var i = 0; i < histLen; i++) {
+		var data = history[i];
+		var date = new Date(data.createdAt);
+		
+		if (date.getTime() < firstValue.getTime()) {
+			firstValue = date;
+		}
+		
+		sentBalHist.push([ date, data.balances.sent ]);
+		confirmedBalHist.push([ date, data.balances.confirmed ]);
+		unconvertedBalHist.push([ date, data.balances.unconverted ]);
+
+		var khashrate = data.hashRate / 1000.0;
+		hashrateHist.push([ date, khashrate ]);
+	}
+	
+	loadHistory = true;
+}
+
 function doUpdate() {
 	if (address != undefined) {
-		$.getJSON(currentURL + address, function(data) {
-
-			if (data !== undefined && data.error == "" || data.error === undefined) {
-				lastUpdate = new Date();
-
-				hideError();
-
-				performVersionCheck(data);
-				
-				var formatted = formatAPIValues(data);
-
-				updateGraphDataArrays(lastUpdate, formatted);
-
-				replotGraphs();
-
-				updateValues();
-			} else {
-				showError(data.error);
-			}
-		}).error(function() {
-			showError('Local server is unreachable.');
-		});
+		var lastAPICall = new Date().getTime() - lastUpdate.getTime();
+		
+		if (lastAPICall >= apiInterval) {
+			updateAPI();
+		} else {
+			updateGUI();
+		}
 	}
 };
+
+function updateAPI() {
+	$.getJSON(currentURL + address, function(data) {
+		if (data !== undefined && data.error == "" || data.error === undefined) {
+			lastUpdate = new Date();
+
+			hideError();
+
+			performVersionCheck(data);
+
+			updateGraphDataArrays(lastUpdate, data);
+			
+			updateGUI();
+		} else {
+			showError(data.error);
+		}
+	}).error(function(err) {
+		showError('Local server is unreachable.');
+	});
+}
+
+function updateGUI() {
+	loadHistoricalData();
+	
+	replotGraphs();
+	updateValues();
+}
 
 function performVersionCheck(data) {
 	var rcvdVersion = data.wafflesVersion;
@@ -231,7 +270,21 @@ function performVersionCheck(data) {
 			$("#versionOutOfDate").show();
 		}
 	}
+}
+
+function updateGraphDataArrays(date, data) {
+	if (cacheID != data.cacheID) {
+		var formatted = formatAPIValues(data);
+		
+		sentBal.push([ date, formatted.balances.sent ]);
+		confirmedBal.push([ date, formatted.balances.confirmed ]);
+		unconvertedBal.push([ date, formatted.balances.unconverted ]);
 	
+		var khashrate = formatted.hashRate / 1000.0;
+		hashrate.push([ date, khashrate ]);
+		
+		cacheID = data.cacheID;
+	}
 }
 
 function formatAPIValues(data) {
@@ -245,13 +298,26 @@ function formatAPIValues(data) {
 	};
 }
 
-function updateGraphDataArrays(date, data) {
-	sentBal.push([ date, data.balances.sent ]);
-	confirmedBal.push([ date, data.balances.confirmed ]);
-	unconvertedBal.push([ date, data.balances.unconverted ]);
-
-	var khashrate = data.hashRate / 1000.0;
-	hashrate.push([ date, khashrate ]);
+function loadHistoricalData() {
+	if (loadHistory === true) {
+		// Merge historical data with current data
+		sentBal = sentBalHist.concat(sentBal);
+		confirmedBal = confirmedBalHist.concat(confirmedBal);
+		unconvertedBal = unconvertedBalHist.concat(unconvertedBal);
+		hashrate = hashrateHist.concat(hashrate);
+		
+		// Clear historical data arrays
+		sentBalHist.length = 0;
+		confirmedBalHist.length = 0;
+		unconvertedBalHist.length = 0;
+		hashrateHist.length = 0;
+		
+		// Reset the interval (timer) to only run as often as the API updates
+		resetInterval(apiInterval);
+		
+		loadHistory = false;
+		hideLoading();
+	}
 }
 
 function replotGraphs() {
@@ -326,12 +392,12 @@ function getTickValues() {
 		var hours=(totalTime/(1000*60*60));
 		var minutes=(totalTime/(1000*60));
 
-		if (hours > 72) {
+		if (hours > 60) {
 			values = ['1 day', '%b %d %H:%M:%S'];
-		} else if (hours > 24) {
+		} else if (hours > 18) {
 			values = ['12 hours', '%b %d %H:%M:%S'];
 		} else if (hours > 5) {
-			values = ['6 hours', '%H:%M:%S'];
+			values = ['6 hours', '%b %d %H:%M:%S'];
 		} else if (minutes > 59) {
 			values = ['60 minutes', '%H:%M:%S'];
 		} else if (minutes > 25) {
@@ -390,6 +456,17 @@ function hideError() {
 	}
 }
 
+function showLoading(str) {
+	$('#loading').html(str);
+	$('#loading').slideDown("slow");
+}
+
+function hideLoading() {
+	if ($('#loading').is(":visible")) {
+		$('#loading').slideUp("slow");
+	}
+}
+
 function startInterval() {
 	if (intervalId == 0) {
 		
@@ -416,6 +493,18 @@ function stopInterval() {
 		$('#status').html('paused');
 	}
 };
+
+function resetInterval(interval) {
+	if (intervalId != 0) {
+		clearInterval(intervalId);
+	}
+	
+	updateInterval = interval;
+	
+	intervalId = self.setInterval(function() {
+		doUpdate();
+	}, interval);
+}
 
 $.extend({
 	getUrlVars : function() {

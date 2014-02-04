@@ -9,17 +9,20 @@ var routes = require('./routes');
 var http = require('http');
 var path = require('path');
 
+var redis = require("redis");
+var rclient = redis.createClient();
+
 // Initialize mongoose schemas
 require('./models/models.js').initialize();
 
 var app = express();
 
-var current = require('./routes/current')(app);
-var historical = require('./routes/historical')(app);
+var current = require('./routes/current')(app, rclient);
+var historical = require('./routes/historical')(app, rclient);
 
 app.configure(function() {
 	// Waffles Version Info
-	app.set('wafflesVersion', '0.3');
+	app.set('wafflesVersion', '0.4');
 
 	// all environments
 	app.set('port', process.env.PORT || 3000);
@@ -38,23 +41,24 @@ app.configure('development', function() {
 	app.use(express.errorHandler());
 	app.locals.pretty = true;
 	mongoose.connect('mongodb://localhost/waffles-dev');
-	console.log("DEV");
 });
 
 app.configure('test', function() {
 	app.use(express.errorHandler());
 	app.locals.pretty = true;
 	mongoose.connect('mongodb://localhost/waffles-test');
-	console.log("TEST");
 });
 
 app.configure('production', function() {
 	app.use(express.errorHandler());
 	app.locals.pretty = true;
 	mongoose.connect('mongodb://localhost/waffles');
-	console.log("PROD");
 });
 
+// Perform v0.3 history conversion
+require('./plugins/historyCleanup')();
+
+// Setup routes
 app.get('/', routes.index);
 app.get('/current/:address', current.temp_api);
 app.get('/historical/:address', historical.get);
