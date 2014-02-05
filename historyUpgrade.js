@@ -20,49 +20,45 @@ app.configure('production', function() {
 var Address = mongoose.model('Address');
 var History = mongoose.model('History');
 
+var addresses = 0;
+var dataPoints = 0;
+var newHistDocs = [];
+
 //Upgrade the entire address table
-var q = Address.find({});
-q.exec(function(err, addresses) {
-	if (err) {
-		log.error(err);
-		disconnect();
-		return;
+var stream = Model.find().stream();
+
+stream.on('data', function (address) {
+	addresses++;
+	
+	var btcAddr = address.address;
+		
+	var dataLen = address.data.length;
+	
+	dataPoints += dataLen;
+	
+	for (var d = 0; d < dataLen; d++) {
+		var data = address.data[d];
+		
+		var hist = {
+			address: btcAddr,
+			createdAt: data.retrieved,
+			hashRate: data.hashRate,
+			balances: {
+				sent: data.balances.sent,
+				confirmed: data.balances.confirmed,
+				unconverted: data.balances.unconverted,
+			}
+		};
+		
+		newHistDocs.push(hist);
 	}
 	
-	var addressesLen = addresses.length;
+}).on('error', function (err) {
+	log.error(err);
+	disconnect();
 	
+}).on('close', function() {
 	log.info('Found %d addresses...', addressesLen);
-	
-	var dataPoints = 0;
-	var newHistDocs = [];
-	
-	for (var a = 0; a < addressesLen; a++) {
-		var address = addresses[a];
-		
-		var btcAddr = address.address;
-		
-		var dataLen = address.data.length;
-		
-		dataPoints += dataLen;
-		
-		for (var d = 0; d < dataLen; d++) {
-			var data = address.data[d];
-			
-			var hist = {
-				address: btcAddr,
-				createdAt: data.retrieved,
-				hashRate: data.hashRate,
-				balances: {
-					sent: data.balances.sent,
-					confirmed: data.balances.confirmed,
-					unconverted: data.balances.unconverted,
-				}
-			};
-			
-			newHistDocs.push(hist);
-		}
-	}
-	
 	log.info('Converting %d datapoints...', dataPoints);
 	log.info('Executing create call...');
 	
@@ -70,7 +66,7 @@ q.exec(function(err, addresses) {
 		if (createError) {
 			log.err(createError);
 		}
-
+		
 		disconnect();
 	});
 });
