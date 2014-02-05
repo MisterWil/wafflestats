@@ -24,15 +24,15 @@ var History = mongoose.model('History');
 
 var insertsWaitingCallback = 0;
 
-// Dump the history table
-History.collection.drop(function (err) {
+// Dump the history table // commented out so we NEVER DO THIS EVER
+//History.collection.drop(function (err) {
 	
 	log.info('Dropped history table...');
 	var addresses = 0;
 	var dataPoints = 0;
 	var newHistDocs = [];
 	
-
+	log.info('Processing address table (could take awhile)...');
 	//Upgrade the entire address table
 	var stream = Address.find().stream();
 
@@ -90,7 +90,7 @@ History.collection.drop(function (err) {
 		log.info('Waiting for %d create calls to return...', chunkTotal);
 		disconnect();
 	});
-});
+//});
 
 function disconnect() {
 	if (insertsWaitingCallback == 0) {
