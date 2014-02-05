@@ -27,8 +27,9 @@ History.collection.drop(function (err) {
 	
 	log.info('Dropped history table...');
 
-	// Upgrade the entire address table, 5 at a time
-	var q = Address.find({}).limit(5);
+	// Upgrade the entire address table
+	var q = Address.find({});
+	
 	q.exec(function(err, addresses) {
 		if (err) {
 			writeCount = 0;
@@ -49,7 +50,6 @@ History.collection.drop(function (err) {
 			var dataLen = address.data.length;
 			
 			dataPoints += dataLen;
-			writeCount += dataLen;
 			
 			for (var d = 0; d < dataLen; d++) {
 				var data = address.data[d];
@@ -65,11 +65,13 @@ History.collection.drop(function (err) {
 					}
 				};
 				
+				writeCount++;
+				
 				History.create(hist, function (createError) {
 					if (createError) {
 						log.err(createError);
 					}
-					
+					writeCount--;
 					disconnect();
 				});
 			}
