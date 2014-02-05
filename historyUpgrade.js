@@ -25,7 +25,7 @@ var dataPoints = 0;
 var newHistDocs = [];
 
 //Upgrade the entire address table
-var stream = Addresses.find().stream();
+var stream = Address.find().stream();
 
 stream.on('data', function (address) {
 	addresses++;
