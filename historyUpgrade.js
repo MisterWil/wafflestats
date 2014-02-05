@@ -27,8 +27,9 @@ History.collection.drop(function (err) {
 	
 	log.info('Dropped history table...');
 
-	// Upgrade the entire address table
-	Address.find({}, function(err, addresses) {
+	// Upgrade the entire address table, 5 at a time
+	var q = Address.find({}).limit(5);
+	q.exec(function(err, addresses) {
 		if (err) {
 			writeCount = 0;
 			log.error(err);
