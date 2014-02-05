@@ -20,8 +20,6 @@ app.configure('production', function() {
 var Address = mongoose.model('Address');
 var History = mongoose.model('History');
 
-var writeCount = 0;
-
 // Dump the history table
 History.collection.drop(function (err) {
 	
@@ -29,10 +27,8 @@ History.collection.drop(function (err) {
 
 	// Upgrade the entire address table
 	var q = Address.find({});
-	
 	q.exec(function(err, addresses) {
 		if (err) {
-			writeCount = 0;
 			log.error(err);
 			disconnect();
 			return;
@@ -41,6 +37,7 @@ History.collection.drop(function (err) {
 		var addressesLen = addresses.length;
 		
 		var dataPoints = 0;
+		var newHistDocs = [];
 		
 		for (var a = 0; a < addressesLen; a++) {
 			var address = addresses[a];
@@ -51,37 +48,36 @@ History.collection.drop(function (err) {
 			
 			dataPoints += dataLen;
 			
-			setTimeout(function() {
-				for (var d = 0; d < dataLen; d++) {
-					var data = address.data[d];
-					
-					var hist = {
-						address: btcAddr,
-						createdAt: data.retrieved,
-						hashRate: data.hashRate,
-						balances: {
-							sent: data.balances.sent,
-							confirmed: data.balances.confirmed,
-							unconverted: data.balances.unconverted,
-						}
-					};
-					
-					writeCount++;
-					
-					History.create(hist, function (createError) {
-						if (createError) {
-							log.err(createError);
-						}
-						writeCount--;
-						disconnect();
-					});
-				}
-			}, 1000);
+			for (var d = 0; d < dataLen; d++) {
+				var data = address.data[d];
+				
+				var hist = {
+					address: btcAddr,
+					createdAt: data.retrieved,
+					hashRate: data.hashRate,
+					balances: {
+						sent: data.balances.sent,
+						confirmed: data.balances.confirmed,
+						unconverted: data.balances.unconverted,
+					}
+				};
+				
+				newHistDocs.push(hist);
+			}
 		}
 		
 		log.info('Found %d addresses...', addressesLen);
 		log.info('Converting %d datapoints...', dataPoints);
-	});
+		log.info('Executing create call...');
+		
+		History.create(newHistDocs, function (createError) {
+			if (createError) {
+				log.err(createError);
+			}
+
+			disconnect();
+		});
+	})
 });
 
 function disconnect() {
