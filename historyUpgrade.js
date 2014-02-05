@@ -51,30 +51,32 @@ History.collection.drop(function (err) {
 			
 			dataPoints += dataLen;
 			
-			for (var d = 0; d < dataLen; d++) {
-				var data = address.data[d];
-				
-				var hist = {
-					address: btcAddr,
-					createdAt: data.retrieved,
-					hashRate: data.hashRate,
-					balances: {
-						sent: data.balances.sent,
-						confirmed: data.balances.confirmed,
-						unconverted: data.balances.unconverted,
-					}
-				};
-				
-				writeCount++;
-				
-				History.create(hist, function (createError) {
-					if (createError) {
-						log.err(createError);
-					}
-					writeCount--;
-					disconnect();
-				});
-			}
+			setTimeout(function() {
+				for (var d = 0; d < dataLen; d++) {
+					var data = address.data[d];
+					
+					var hist = {
+						address: btcAddr,
+						createdAt: data.retrieved,
+						hashRate: data.hashRate,
+						balances: {
+							sent: data.balances.sent,
+							confirmed: data.balances.confirmed,
+							unconverted: data.balances.unconverted,
+						}
+					};
+					
+					writeCount++;
+					
+					History.create(hist, function (createError) {
+						if (createError) {
+							log.err(createError);
+						}
+						writeCount--;
+						disconnect();
+					});
+				}
+			}, 1000);
 		}
 		
 		log.info('Found %d addresses...', addressesLen);
