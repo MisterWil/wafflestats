@@ -9,10 +9,12 @@ require('./models/models.js').initialize();
 
 app.configure('development', function() {
 	mongoose.connect('mongodb://localhost/waffles-dev');
+	log.info('Database: waffles-dev');
 });
 
 app.configure('production', function() {
 	mongoose.connect('mongodb://localhost/waffles');
+	log.info('Database: waffles');
 });
 
 var Address = mongoose.model('Address');
@@ -22,6 +24,8 @@ var writeCount = 1;
 
 // Dump the history table
 History.collection.drop(function (err) {
+	
+	log.info('Dropped history table...', addressesLen);
 
 	// Upgrade the entire address table
 	Address.find({}, function(err, addresses) {
@@ -75,7 +79,7 @@ History.collection.drop(function (err) {
 		}
 		
 		log.info('Found %d addresses...', addressesLen);
-		log.info('Converted %d datapoints...', dataPoints);
+		log.info('Converting %d datapoints...', dataPoints);
 		
 		disconnect();
 	});
