@@ -77,9 +77,6 @@ History.collection.drop(function (err) {
 });
 
 function disconnect() {
-	if (writeCount == 0) {
-		mongoose.disconnect();
-		log.info('Done.');
-		return;
-	}
+	mongoose.disconnect();
+	log.info('Done.');
 }
