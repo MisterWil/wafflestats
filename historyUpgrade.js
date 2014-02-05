@@ -20,7 +20,7 @@ app.configure('production', function() {
 var Address = mongoose.model('Address');
 var History = mongoose.model('History');
 
-var writeCount = 1;
+var writeCount = 0;
 
 // Dump the history table
 History.collection.drop(function (err) {
@@ -38,7 +38,6 @@ History.collection.drop(function (err) {
 		}
 		
 		var addressesLen = addresses.length;
-		writeCount = addressesLen;
 		
 		var dataPoints = 0;
 		
@@ -50,8 +49,7 @@ History.collection.drop(function (err) {
 			var dataLen = address.data.length;
 			
 			dataPoints += dataLen;
-
-			var newHistDocs = [];
+			writeCount += dataLen;
 			
 			for (var d = 0; d < dataLen; d++) {
 				var data = address.data[d];
@@ -67,22 +65,18 @@ History.collection.drop(function (err) {
 					}
 				};
 				
-				newHistDocs.push(hist);
+				History.create(hist, function (createError) {
+					if (createError) {
+						log.err(createError);
+					}
+					
+					disconnect();
+				});
 			}
-			
-			History.create(newHistDocs, function (createError) {
-				if (createError) {
-					log.err(createError);
-				}
-				writeCount--;
-				disconnect();
-			});
 		}
 		
 		log.info('Found %d addresses...', addressesLen);
 		log.info('Converting %d datapoints...', dataPoints);
-		
-		disconnect();
 	});
 });
 
