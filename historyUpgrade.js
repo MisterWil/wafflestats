@@ -25,7 +25,7 @@ var writeCount = 1;
 // Dump the history table
 History.collection.drop(function (err) {
 	
-	log.info('Dropped history table...', addressesLen);
+	log.info('Dropped history table...');
 
 	// Upgrade the entire address table
 	Address.find({}, function(err, addresses) {
