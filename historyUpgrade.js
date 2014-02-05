@@ -68,7 +68,7 @@ History.collection.drop(function (err) {
 		
 		History.collection.insert(newHistDocs, function (createError, result) {
 			if (createError) {
-				log.err(createError);
+				log.error(createError);
 			}
 			
 			disconnect();
