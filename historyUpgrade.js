@@ -66,7 +66,7 @@ History.collection.drop(function (err) {
 		log.info('Converting %d datapoints...', dataPoints);
 		log.info('Executing create call...');
 		
-		History.create(newHistDocs, function (createError) {
+		History.collection.insert(newHistDocs, function (createError) {
 			if (createError) {
 				log.err(createError);
 			}
