@@ -411,9 +411,16 @@ function getTickValues() {
 function updateValues() {
 	updateHashrateMetrics();
 	
-	$('#sentBalance').html(sprintf(bitcoinFormatString, getLastValue(sentBal, 1, 0)));
-	$('#confirmedBalance').html(sprintf(bitcoinFormatString, getLastValue(confirmedBal, 1, 0)));
-	$('#unconvertedBalance').html(sprintf(bitcoinFormatString, getLastValue(unconvertedBal, 1, 0)));
+	var currentSentBalance = getLastValue(sentBal, 1, 0);
+	var currentConfirmedBalance = getLastValue(confirmedBal, 1, 0);
+	var currentUnconvertedBalance = getLastValue(unconvertedBal, 1, 0);
+	
+	$('#sentBalance').html(sprintf(bitcoinFormatString, currentSentBalance));
+	$('#confirmedBalance').html(sprintf(bitcoinFormatString, currentConfirmedBalance));
+	$('#unconvertedBalance').html(sprintf(bitcoinFormatString, currentUnconvertedBalance));
+	
+	var totalUnsentBalance = currentConfirmedBalance + currentUnconvertedBalance;
+	$('#totalUnsent').html(sprintf(bitcoinFormatString, totalUnsentBalance));
 
 	$('#lastUpdatedValue').html(lastUpdate.toLocaleString());
 }
