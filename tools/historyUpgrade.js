@@ -2,10 +2,10 @@ var express = require('express');
 var mongoose = require('mongoose');
 var app = express();
 
-var log = require('./log');
+var log = require('../log');
 
 //Initialize mongoose schemas
-require('./models/models.js').initialize();
+require('../models/models.js').initialize();
 
 log.info('Starting Address->History collection conversion...');
 

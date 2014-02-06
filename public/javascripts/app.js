@@ -227,9 +227,9 @@ function doUpdate() {
 		
 		if (lastAPICall >= apiInterval) {
 			updateAPI();
-		} else {
-			updateGUI();
 		}
+		
+		updateGUI();
 	}
 };
 
@@ -243,8 +243,6 @@ function updateAPI() {
 			performVersionCheck(data);
 
 			updateGraphDataArrays(lastUpdate, data);
-			
-			updateGUI();
 		} else {
 			showError(data.error);
 		}
@@ -254,6 +252,7 @@ function updateAPI() {
 }
 
 function updateGUI() {
+
 	loadHistoricalData();
 	
 	replotGraphs();
@@ -321,13 +320,12 @@ function loadHistoricalData() {
 }
 
 function replotGraphs() {
-	// Hash Rate Meter Replot
 	hashRateMeter.resetAxesScale();
 	hashRateMeter.replot({
-		data : [ [ hashrate.last()[1] ] ],
+		data : [ [ getLastValue(hashrate, 1, 1) ] ],
 		seriesDefaults : {
 			rendererOptions : {
-				label : sprintf(hashrateFormatString, hashrate.last()[1])
+				label : sprintf(hashrateFormatString, getLastValue(hashrate, 1, 0))
 			}
 		}
 	});
@@ -413,11 +411,21 @@ function getTickValues() {
 function updateValues() {
 	updateHashrateMetrics();
 	
-	$('#sentBalance').html(sprintf(bitcoinFormatString, sentBal.last()[1]));
-	$('#confirmedBalance').html(sprintf(bitcoinFormatString, confirmedBal.last()[1]));
-	$('#unconvertedBalance').html(sprintf(bitcoinFormatString, unconvertedBal.last()[1]));
+	$('#sentBalance').html(sprintf(bitcoinFormatString, getLastValue(sentBal, 1, 0)));
+	$('#confirmedBalance').html(sprintf(bitcoinFormatString, getLastValue(confirmedBal, 1, 0)));
+	$('#unconvertedBalance').html(sprintf(bitcoinFormatString, getLastValue(unconvertedBal, 1, 0)));
 
 	$('#lastUpdatedValue').html(lastUpdate.toLocaleString());
+}
+
+function getLastValue(array, index, undefVal) {
+	var arr = array.last();
+	
+	if (arr!== undefined && arr[index] !== undefined) {
+		return arr[index];
+	}
+	
+	return undefVal;
 }
 
 function updateHashrateMetrics() {
