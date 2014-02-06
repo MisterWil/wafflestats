@@ -416,6 +416,9 @@ function updateValues() {
 	$('#sentBalance').html(sprintf(bitcoinFormatString, sentBal.last()[1]));
 	$('#confirmedBalance').html(sprintf(bitcoinFormatString, confirmedBal.last()[1]));
 	$('#unconvertedBalance').html(sprintf(bitcoinFormatString, unconvertedBal.last()[1]));
+	
+	var totalUnsent = confirmedBal.last()[1] + unconvertedBal.last()[1];
+	$('#totalUnsent').html(sprintf(bitcoinFormatString, totalUnsent));
 
 	$('#lastUpdatedValue').html(lastUpdate.toLocaleString());
 }
