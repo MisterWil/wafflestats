@@ -56,6 +56,8 @@ var ONE_SECOND_MILLIS = 1000 * 1;
 var ONE_MINUTE_MILLIS = 1000 * 60;
 var ONE_HOUR_MILLIS = 1000 * 60 * 60;
 
+// Pulled from http://java.dzone.com/articles/mongodb-time-series?page=0,2
+
 function aggregateData(btcAddr, fromDate, toDate, groupDeltaMillis) {    
     var groupBy = {
         "year" : {
