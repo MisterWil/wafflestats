@@ -24,9 +24,9 @@ var btcAddr = 'sine';
 
 var startTime = new Date().getTime() - 1000 * 60 * 60 * 24 * 1; // Subtract (1 second * 60 seconds * 60 minutes * 24 hours * 7 days)
 var dataPointScale = 1000 * 60; // One minute
-var datapoints = 60*24*1; // 1 per minute, for 24 hours, for 7 days
+var datapoints = 60*24*1*7; // 1 per minute, for 24 hours, for 7 days
 
-var multipler = 18; // How quickly the sine curve fluctuates
+var multipler = 0.2; // How quickly the sine curve fluctuates
 var height = 1000; //kh/S
 var scale = 0.3; // How much higher/lower than the height it can reach where scale of 1 is +- height
 var randLow = 1.0; // Randomize end value

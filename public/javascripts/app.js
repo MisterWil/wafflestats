@@ -210,6 +210,10 @@ function prepareHistoricalData(history) {
 			firstValue = date;
 		}
 		
+		if (date.getTime() > lastUpdate.getTime()) {
+			lastUpdate = date;
+		}
+		
 		sentBalHist.push([ date, data.balances.sent ]);
 		confirmedBalHist.push([ date, data.balances.confirmed ]);
 		unconvertedBalHist.push([ date, data.balances.unconverted ]);
