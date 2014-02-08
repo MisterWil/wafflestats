@@ -56,8 +56,8 @@ app.configure('production', function() {
 // Setup routes
 app.get('/', routes.index);
 app.get('/current/:address', current.temp_api);
+app.get('/historical/:address/:resolution/:range', historical.granularity);
 app.get('/historical/:address', historical.get);
-app.get('/aggregate/:address', historical.aggregateTest);
 
 // Backwards compatibility
 app.get('/temp-api/:address', current.temp_api);

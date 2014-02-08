@@ -4,12 +4,42 @@ var extend = require("xtend");
 var mongoose = require('mongoose');
 var History = mongoose.model('History');
 
+// Valid resolution and ranges
+var ONE_MINUTE = '1min';
+var FIVE_MINUTE = '5min';
+var ONE_HOUR = '1hr';
+var SIX_HOUR = '6hr';
+var TWELVE_HOUR = '12hr';
+var TWENTYFOUR_HOUR = '24hr';
+var ONE_DAY = '1day';
+var ONE_WEEK = '1wk';
+var ONE_MONTH = '1mo';
+var TWO_MONTH = '2mo';
+
+var validResolutions = [ONE_MINUTE, FIVE_MINUTE, ONE_HOUR, ONE_DAY];
+var validRanges = [ONE_HOUR, SIX_HOUR, TWELVE_HOUR, TWENTYFOUR_HOUR, ONE_DAY, ONE_WEEK, ONE_MONTH];
+
+var rangesAbove = 4, onlyAcceptResolutionsAbove = 2; // If a range is larger than ONE_DAY, only allow resolutions above FIVE_MINUTE
+
 module.exports = function(app, rclient) {
 	var routes = {};
 
 	routes.get = function(req, res) {
 		if (req.params.address != undefined) {
-			History.find({ address: req.params.address }, function(err, history) {
+			var where = {
+				address : req.params.address
+			};
+
+			var fields = {
+				'_id' : 0,
+				'createdAt' : 1,
+				'hashRate' : 1,
+				'balances.sent' : 1,
+				'balances.confirmed' : 1,
+				'balances.unconverted' : 1,
+			}
+			
+			History.find(where, fields, function(err, history) {
 				if (err) {
 					log.error(err);
 					return res.send({ error: "Unknown History Retrieval Error" });
@@ -21,12 +51,39 @@ module.exports = function(app, rclient) {
 		}
 	};
 	
-	routes.aggregateTest = function(req, res) {
+	routes.granularity = function(req, res) {
 		// Setup API path for remote json call
-		if (req.params.address != undefined) {
+		if (req.params.address != undefined && req.params.resolution != undefined && req.params.range != undefined) {
+			
+			var btcAddr = req.params.address.trim();
+			var resolution = req.params.resolution.trim();
+			var range = req.params.range.trim();
+			
+			if (!arrayContains(resolution, validResolutions)) {
+				return res.send({ error: "Invalid Resolution", acceptedResolutions: validResolutions, acceptedRanges: validRanges });
+			}
+			
+			if (!arrayContains(range, validRanges)) {
+				return res.send({ error: "Invalid Range", acceptedResolutions: validResolutions, acceptedRanges: validRanges });
+			}
+			
+			var resolutionIndex = validResolutions.indexOf(resolution);
+			var rangeIndex = validRanges.indexOf(range);
+			
+			if (rangeIndex > rangesAbove && !(resolutionIndex >= onlyAcceptResolutionsAbove)) {
+				return res.send({ error: "Resolution too high for given range.", range: range, acceptedResolutions: validResolutions.slice(onlyAcceptResolutionsAbove) });
+			}
+			
+			// Create the date object for how much data to pull
+			var rangeDate = new Date();
+			rangeDate.setHours(rangeDate.getHours() - getHours(range));
 			
 			var start = new Date();
-			History.aggregate(aggregateData(req.params.address, 0, 0, ONE_MINUTE_MILLIS)).exec(function (err, result) {
+			
+			var pipeline = createAggregatePipeline(btcAddr, resolution, rangeDate);
+			var aggregateQuery = History.aggregate(pipeline);
+			
+			aggregateQuery.exec(function (err, result) {
 				if (err) {
 					log.error(err);
 					return res.send({ error: err });
@@ -52,67 +109,63 @@ module.exports = function(app, rclient) {
 	return routes;
 };
 
-var ONE_SECOND_MILLIS = 1000 * 1;
-var ONE_MINUTE_MILLIS = 1000 * 60;
-var ONE_HOUR_MILLIS = 1000 * 60 * 60;
-
-// Pulled from http://java.dzone.com/articles/mongodb-time-series?page=0,2
-
-function aggregateData(btcAddr, fromDate, toDate, groupDeltaMillis) {    
-    var groupBy = {
+function createAggregatePipeline(btcAddr, resolution, fromDate) {
+	var groupBy = {
         "year" : {
             $year : "$createdAt"
         },
-        "dayOfYear" : {
-            $dayOfYear : "$createdAt"
+        "month" : {
+            $month : "$createdAt"
+        },
+        "day" : {
+            $dayOfMonth : "$createdAt"
         }
     };
-     
-    var sortBy = {
+	
+	var sortBy = {
             "_id.year" : 1,
-            "_id.dayOfYear" : 1
-    }; 
-     
-    var appendSeconds = false;
-    var appendMinutes = false;
-    var appendHours = false;
-     
-    switch(groupDeltaMillis) {
-        case ONE_SECOND_MILLIS :
-            appendSeconds = true;          
-        case ONE_MINUTE_MILLIS :
-            appendMinutes = true;          
-        case ONE_HOUR_MILLIS :
-            appendHours = true;    
-    }  
-         
-    if(appendHours) {
+            "_id.month" : 1,
+            "_id.day" : 1
+    };
+	
+	var appendMinutes = false;
+	var appendHours = false;
+	
+	var minuteModVal;
+	
+	switch(resolution) {
+	case ONE_MINUTE:
+	case FIVE_MINUTE:
+		appendMinutes = true;
+	case ONE_HOUR:
+		appendHours = true;
+	}
+	
+	if(appendHours) {
         groupBy["hour"] = {
             $hour : "$createdAt"  
         };
         sortBy["_id.hour"] = 1;
     }
+	
     if(appendMinutes) {
-        groupBy["fiveminute"] = {
-        		$mod : [ {$minute : "$createdAt"}, 12] // 12 from 60/5... to get back to minutes... x*5
+    	var mod = 60;
+    	
+    	if (resolution === FIVE_MINUTE) {
+    		mod = 60/5; // Get back to minutes using min * 5
+    	}
+    	
+        groupBy[resolution] = {
+        		$mod : [ {$minute : "$createdAt"}, mod]
         };
-        sortBy["_id.minute"] = 1;
+        sortBy["_id." + resolution] = 1;
     }
-    if(appendSeconds) {
-        groupBy["second"] = {
-            $second : "$createdAt"
-        };
-        sortBy["_id.second"] = 1;
-    }  
-     
+    
     var pipeline = [
         {
             $match: {
-            	"address" : btcAddr
-/*                ,"createdAt" : {
-                    $gte: fromDate,
-                    $lt : toDate   
-                }*/
+            	"address" : btcAddr,
+            	"createdAt" : { $gte: fromDate }
             }
         },
         {
@@ -133,52 +186,18 @@ function aggregateData(btcAddr, fromDate, toDate, groupDeltaMillis) {
                     "count": {
                         $sum: 1
                     },
-                    //"hashRate": {
-                    	"avg": {
-                            $avg: "$hashRate"
-                        },
-                        "min": {
-                            $min: "$hashRate"
-                        },
-                        "max": {
-                            $max: "$hashRate"
-                        }   
-                    //}
-                    /*"balances" : {
-                    	"sent" : {
-                    		"avg": {
-                                $avg: "$sent"
-                            },
-                            "min": {
-                                $min: "$sent"
-                            },
-                            "max": {
-                                $max: "$sent"
-                            }   
-                    	},
-                    	"confirmed" : {
-                    		"avg": {
-                                $avg: "$confirmed"
-                            },
-                            "min": {
-                                $min: "$confirmed"
-                            },
-                            "max": {
-                                $max: "$confirmed"
-                            }   
-                    	},
-                    	"unconverted" : {
-                    		"avg": {
-                                $avg: "$unconverted"
-                            },
-                            "min": {
-                                $min: "$unconverted"
-                            },
-                            "max": {
-                                $max: "$unconverted"
-                            }   
-                    	}
-                    }*/
+                    "hashRate": {
+                    	$avg: "$hashRate"
+                    },
+                	"sent" : {
+                		$avg: "$sent"
+                	},
+                	"confirmed" : {
+                		$avg: "$confirmed"
+                	},
+                	"unconverted" : {
+                        $avg: "$unconverted" 
+                	}
                 }
         },
         {
@@ -187,4 +206,31 @@ function aggregateData(btcAddr, fromDate, toDate, groupDeltaMillis) {
     ];
     
     return pipeline;
+}
+
+function getHours(range) {
+	switch (range) {
+	case ONE_HOUR:
+		return 1;
+	case SIX_HOUR:
+		return 6;
+	case TWELVE_HOUR:
+		return 12;
+	case TWENTYFOUR_HOUR:
+		return 24;
+	case ONE_DAY:
+		return 24;
+	case ONE_WEEK:
+		return 24*7;
+	case ONE_MONTH:
+		return 24*7*4;
+	case TWO_MONTH:
+		return 24*7*4*2;
+	}
+	
+	return 1;
+}
+
+function arrayContains(needle, arrhaystack) {
+    return (arrhaystack.indexOf(needle) > -1);
 }

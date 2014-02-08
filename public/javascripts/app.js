@@ -43,6 +43,10 @@ var apiInterval = 1000 * 60;
 var hashrateFormatString = "%.2f kH/s";
 var bitcoinFormatString = "฿ %.8f";
 
+// Regex to test bitcoin addresses before pinging for current data
+// Disabled for historical data so I can test locally using historical data
+var btcAddressRegex = /^[13][1-9A-HJ-NP-Za-km-z]{26,33}/;
+
 // Graph setup
 var graphDefaults = {
 	seriesDefaults : {
@@ -144,7 +148,7 @@ $.ajaxSetup({
 $(document).ready(function() {
 
 	// Grab Bitcoin address
-	address = $.getUrlVar('address');
+	address = $.getUrlVar('address').trim();
 
 	if (address === undefined) {
 		$("#welcomePage").show();
@@ -226,15 +230,15 @@ function prepareHistoricalData(history) {
 }
 
 function doUpdate() {
-	if (address != undefined) {
+	if (address != undefined && btcAddressRegex.test(address)) {
 		var lastAPICall = new Date().getTime() - lastUpdate.getTime();
 		
 		if (lastAPICall >= apiInterval) {
 			updateAPI();
 		}
-		
-		updateGUI();
 	}
+	
+	updateGUI();
 };
 
 function updateAPI() {

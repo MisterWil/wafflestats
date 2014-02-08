@@ -22,7 +22,10 @@ var History = mongoose.model('History');
 // Generation properties/constants
 var btcAddr = 'sine';
 
-var startTime = new Date().getTime() - 1000 * 60 * 60 * 24 * 1; // Subtract (1 second * 60 seconds * 60 minutes * 24 hours * 7 days)
+var startDate = new Date();
+startDate.setDate(startDate.getDate() - 7);
+
+var startTime = startDate.getTime();
 var dataPointScale = 1000 * 60; // One minute
 var datapoints = 60*24*1*7; // 1 per minute, for 24 hours, for 7 days
 
