@@ -32,7 +32,7 @@ History.find().distinct('address', function (err, addresses) {
 	var fails = 0;
 	
 	for (var i = 0; i < addresses.length; i++) {
-		var btcAddr = addresses[i]
+		var btcAddr = addresses[i].trim();
 		
 		if (!regExp.test(btcAddr)) {
 			log.info('Address \'%s\' failed!', btcAddr);
