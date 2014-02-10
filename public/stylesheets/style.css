@@ -71,6 +71,26 @@ a:hover {
 	right: 10px;
 	background-color: rgba(255, 255, 255, 0.8);
 	z-index: 99;
+	text-align: right;
+}
+
+#controls span {
+	padding-left: 10px;
+}
+
+#controls .title {
+	font-weight: bold;
+	font-size: 11px;
+}
+
+#controls .ui-button.ui-widget {
+    height: 15px;
+}
+
+#controls .ui-button.ui-widget .ui-button-text{
+    font-size: 10px;
+    line-height: 6px;
+    text-transform: lowercase;
 }
 
 #toolbar .key {
@@ -101,6 +121,42 @@ a:hover {
 	font-size: 1.2em;
 }
 
+.timeScale {
+	margin: 0 auto;
+	align: right;
+	text-align: right;
+	padding-right: 8%;
+}
+
+.timeScale span {
+	padding-left: 7px;
+}
+
+.timeScale .title {
+	font-weight: bold;
+	font-size: 11px;
+}
+
+.timeScale .ui-button.ui-widget {
+    height: 15px;
+}
+
+.timeScale .ui-button.ui-widget .ui-button-text{
+    font-size: 10px;
+    line-height: 6px;
+    text-transform: lowercase;
+}
+
+.loading {
+    background: url("../images/loading_82x82.gif");
+	background-position: center center;
+    background-repeat: no-repeat;
+    background-color: white;
+    opacity: .7; /* Some subtle opacity to help blend with variable background colors */
+    width: 100%;
+    position: relative;
+}
+
 #currentHashRate {
 	width: 250px;
 	text-align: center;
@@ -127,6 +183,11 @@ a:hover {
 	text-align: center;
 	align: center;
 	width: 100%;
+}
+
+#hashRateHistoryLoading {
+	height: 170px;
+	margin-top: -170px;
 }
 
 #hashRateGraph {
@@ -168,6 +229,11 @@ a:hover {
 #historicalBalances {
 	text-align: center;
 	align: center;
+}
+
+#balancesHistoryLoading {
+	height: 275px;
+	margin-top: -275px;
 }
 
 #balancesGraph {

@@ -51,65 +51,69 @@ module.exports = function(app, rclient) {
 		}
 	};
 	
-	routes.granularity = function(req, res) {
-		// Setup API path for remote json call
-		if (req.params.address != undefined && req.params.resolution != undefined && req.params.range != undefined) {
-			
-			var btcAddr = req.params.address.trim();
-			var resolution = req.params.resolution.trim();
-			var range = req.params.range.trim();
-			
-			if (!arrayContains(resolution, validResolutions)) {
-				return res.send({ error: "Invalid Resolution", acceptedResolutions: validResolutions, acceptedRanges: validRanges });
-			}
-			
-			if (!arrayContains(range, validRanges)) {
-				return res.send({ error: "Invalid Range", acceptedResolutions: validResolutions, acceptedRanges: validRanges });
-			}
-			
-			var resolutionIndex = validResolutions.indexOf(resolution);
-			var rangeIndex = validRanges.indexOf(range);
-			
-			if (rangeIndex > rangesAbove && !(resolutionIndex >= onlyAcceptResolutionsAbove)) {
-				return res.send({ error: "Resolution too high for given range.", range: range, acceptedResolutions: validResolutions.slice(onlyAcceptResolutionsAbove) });
-			}
-			
-			// Create the date object for how much data to pull
-			var rangeDate = new Date();
-			rangeDate.setHours(rangeDate.getHours() - getHours(range));
-			
-			var start = new Date();
-			
-			var pipeline = createAggregatePipeline(btcAddr, resolution, rangeDate);
-			var aggregateQuery = History.aggregate(pipeline);
-			
-			aggregateQuery.exec(function (err, result) {
-				if (err) {
-					log.error(err);
-					return res.send({ error: err });
-				}
-				
-				var aggregationDuration = new Date().getTime() - start.getTime()
-				
-				var inject = {
-					wafflesVersion : app.get('wafflesVersion'),
-					durationMillis : aggregationDuration
-				};
-				result = extend(inject, result);
-					
-				res.send(result);
-				
-			});
-			
-		} else {
-			res.send({ error: "BTC Address Missing" });
-		}
+	routes.granularHashRate = function(req, res) {
+		processHistoricalAggregation(req, res, getHashRateAggregatePipeline);
+	};
+	
+	routes.granularBalances = function(req, res) {
+		processHistoricalAggregation(req, res, getBalanceAggregatePipeline);
 	};
 	
 	return routes;
 };
 
-function createAggregatePipeline(btcAddr, resolution, fromDate) {
+function processHistoricalAggregation(req, res, aggregationFunction) {
+	// Setup API path for remote json call
+	if (req.params.address != undefined && req.params.resolution != undefined && req.params.range != undefined) {
+		
+		var btcAddr = req.params.address.trim();
+		var resolution = req.params.resolution.trim();
+		var range = req.params.range.trim();
+		
+		if (!arrayContains(resolution, validResolutions)) {
+			return res.send({ error: "Invalid Resolution", acceptedResolutions: validResolutions, acceptedRanges: validRanges });
+		}
+		
+		if (!arrayContains(range, validRanges)) {
+			return res.send({ error: "Invalid Range", acceptedResolutions: validResolutions, acceptedRanges: validRanges });
+		}
+		
+		var resolutionIndex = validResolutions.indexOf(resolution);
+		var rangeIndex = validRanges.indexOf(range);
+		
+		if (rangeIndex > rangesAbove && !(resolutionIndex >= onlyAcceptResolutionsAbove)) {
+			return res.send({ error: "Resolution too high for given range.", range: range, acceptedResolutions: validResolutions.slice(onlyAcceptResolutionsAbove) });
+		}
+		
+		// Create the date object for how much data to pull
+		var rangeDate = new Date();
+		rangeDate.setHours(rangeDate.getHours() - getHours(range));
+		
+		var start = new Date();
+		
+		var pipeline = aggregationFunction(btcAddr, resolution, rangeDate);
+		var aggregateQuery = History.aggregate(pipeline);
+		
+		aggregateQuery.exec(function (err, result) {
+			if (err) {
+				log.error(err);
+				return res.send({ error: err });
+			}
+			
+			var aggregationDuration = new Date().getTime() - start.getTime()
+			
+			var a = [].slice.call(result);
+				
+			res.send(a);
+			
+		});
+		
+	} else {
+		res.send({ error: "BTC Address Missing" });
+	}
+}
+
+function getHashRateAggregatePipeline(btcAddr, resolution, fromDate) {
 	var groupBy = {
         "year" : {
             $year : "$createdAt"
@@ -149,17 +153,46 @@ function createAggregatePipeline(btcAddr, resolution, fromDate) {
     }
 	
     if(appendMinutes) {
-    	var mod = 60;
+    	var resVal = 1;
     	
     	if (resolution === FIVE_MINUTE) {
-    		mod = 60/5; // Get back to minutes using min * 5
+    		resVal = 5;
     	}
     	
-        groupBy[resolution] = {
-        		$mod : [ {$minute : "$createdAt"}, mod]
+        groupBy["minute"] = {
+        "$subtract" : [
+                       {
+                           "$minute" : "$createdAt"
+                       },
+                       {
+                           "$mod" : [
+                               {
+                                   "$minute" : "$createdAt"
+                               },
+                               resVal
+                           ]
+                       }
+                   ]
         };
-        sortBy["_id." + resolution] = 1;
+        sortBy["_id.minute"] = 1;
     }
+    
+    groupBy["second"] = {
+            "$subtract" : [
+                           {
+                               "$second" : "$createdAt"
+                           },
+                           {
+                               "$mod" : [
+                                   {
+                                       "$second" : "$createdAt"
+                                   },
+                                   60
+                               ]
+                           }
+                       ]
+            };
+            sortBy["_id.second"] = 1;
     
     var pipeline = [
         {
@@ -172,7 +205,131 @@ function createAggregatePipeline(btcAddr, resolution, fromDate) {
             $project: {
                 _id : 0,
                 createdAt : 1,
-                hashRate : 1,
+                hashRate : 1
+            }
+        },
+        {
+            $group: {
+                    "_id": groupBy,
+                    "createdAt" : {
+                    	$min: "$createdAt",
+                    },
+                    "count": {
+                        $sum: 1
+                    },
+                    "hashRate": {
+                    	$avg: "$hashRate"
+                    }
+                }
+        },
+        {
+            $sort: sortBy
+        },
+        {
+            $project: {
+                _id : 0,
+                createdAt : 1,
+                count: 1,
+                hashRate : 1
+            }
+        }
+    ];
+    
+    return pipeline;
+}
+
+function getBalanceAggregatePipeline(btcAddr, resolution, fromDate) {
+	var groupBy = {
+        "year" : {
+            $year : "$createdAt"
+        },
+        "month" : {
+            $month : "$createdAt"
+        },
+        "day" : {
+            $dayOfMonth : "$createdAt"
+        }
+    };
+	
+	var sortBy = {
+            "_id.year" : 1,
+            "_id.month" : 1,
+            "_id.day" : 1
+    };
+	
+	var appendMinutes = false;
+	var appendHours = false;
+	
+	var minuteModVal;
+	
+	switch(resolution) {
+	case ONE_MINUTE:
+	case FIVE_MINUTE:
+		appendMinutes = true;
+	case ONE_HOUR:
+		appendHours = true;
+	}
+	
+	if(appendHours) {
+        groupBy["hour"] = {
+            $hour : "$createdAt"  
+        };
+        sortBy["_id.hour"] = 1;
+    }
+	
+    if(appendMinutes) {
+    	var resVal = 1;
+    	
+    	if (resolution === FIVE_MINUTE) {
+    		resVal = 5;
+    	}
+    	
+        groupBy["minute"] = {
+        "$subtract" : [
+                       {
+                           "$minute" : "$createdAt"
+                       },
+                       {
+                           "$mod" : [
+                               {
+                                   "$minute" : "$createdAt"
+                               },
+                               resVal
+                           ]
+                       }
+                   ]
+        };
+        sortBy["_id.minute"] = 1;
+    }
+    
+    groupBy["second"] = {
+            "$subtract" : [
+                           {
+                               "$second" : "$createdAt"
+                           },
+                           {
+                               "$mod" : [
+                                   {
+                                       "$second" : "$createdAt"
+                                   },
+                                   60
+                               ]
+                           }
+                       ]
+            };
+            sortBy["_id.second"] = 1;
+    
+    var pipeline = [
+        {
+            $match: {
+            	"address" : btcAddr,
+            	"createdAt" : { $gte: fromDate }
+            }
+        },
+        {
+            $project: {
+                _id : 0,
+                createdAt : 1,
         		balances: {
         			sent: 1,
         			confirmed: 1,
@@ -183,11 +340,11 @@ function createAggregatePipeline(btcAddr, resolution, fromDate) {
         {
             $group: {
                     "_id": groupBy,
+                    "createdAt" : {
+                    	$min: "$createdAt",
+                    },
                     "count": {
                         $sum: 1
-                    },
-                    "hashRate": {
-                    	$avg: "$hashRate"
                     },
                 	"sent" : {
                 		$avg: "$sent"
@@ -202,6 +359,18 @@ function createAggregatePipeline(btcAddr, resolution, fromDate) {
         },
         {
             $sort: sortBy
+        },
+        {
+            $project: {
+                _id : 0,
+                createdAt : 1,
+                count: 1,
+                balances: {
+	    			sent: "$sent",
+	    			confirmed: "$confirmed",
+	    			unconverted: "$unconverted",
+                }
+            }
         }
     ];
     

@@ -56,11 +56,12 @@ app.configure('production', function() {
 // Setup routes
 app.get('/', routes.index);
 app.get('/current/:address', current.temp_api);
-app.get('/historical/:address/:resolution/:range', historical.granularity);
-app.get('/historical/:address', historical.get);
+app.get('/historical/hashRate/:address/:resolution/:range', historical.granularHashRate);
+app.get('/historical/balances/:address/:resolution/:range', historical.granularBalances);
 
 // Backwards compatibility
 app.get('/temp-api/:address', current.temp_api);
+app.get('/historical/:address', historical.get);
 
 http.createServer(app).listen(app.get('port'), function(){
   console.log(

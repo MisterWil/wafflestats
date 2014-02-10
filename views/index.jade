@@ -18,6 +18,17 @@ block content
 			include welcomePage
 
 		div#waffleStats(style="display: none;")
+			div#toolbar
+				div#lastUpdated
+					span.key Last Updated:&nbsp;
+					span#lastUpdatedValue Never
+				div#controls
+					span#run
+						input(type="radio" id="start" name="run" checked="checked")
+						label(for="start") Start
+						input(type="radio" id="stop" name="run")
+						label(for="stop") Stop
+							
 			div#userStats
 				include userStats
 				

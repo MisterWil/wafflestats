@@ -1,12 +1,3 @@
-div#toolbar
-	div#lastUpdated
-		span.key Last Updated:&nbsp;
-		span#lastUpdatedValue Never
-	div#controls
-		a(href="#" id="start") [start]
-		| &nbsp;
-		a(href="#" id="stop") [pause]
-	
 div#hashRate.section
 	table
 		tr
@@ -18,7 +9,11 @@ div#hashRate.section
 				div#hashRateMeter
 			
 			td#historicalHashRate
-				div#hashRateGraph
+				div#hashRateTimeScale.timeScale
+					+timeScale("hashRate")
+				div#hashRateGraphContainer
+					div#hashRateGraph
+					div#hashRateHistoryLoading.loading(style="display: none;")
 				div#hashRateStats
 					span#minimumHashRate
 						span.key Minimum:
@@ -53,4 +48,38 @@ div#balances.section
 						td#totalUnsent ฿ 0.00000000
 						
 			td#historicalBalances
-				div#balancesGraph
+				div#balancesTimeScale.timeScale
+					+timeScale("balances")
+				div#balancesGraphContainer
+					div#balancesGraph
+					div#balancesHistoryLoading.loading(style="display: none;")
+
+mixin timeScale(name)
+	span.resolution
+		span.title resolution by
+		input(type="radio" id="1min_res_#{name}" name="resolution_#{name}" value="1min")
+		label(for="1min_res_#{name}") 1 min
+		input(type="radio" id="5min_res_#{name}" name="resolution_#{name}" value="5min")
+		label(for="5min_res_#{name}") 5 min
+		input(type="radio" id="1hr_res_#{name}" name="resolution_#{name}" value="1hr")
+		label(for="1hr_res_#{name}") 1 hr
+		input(type="radio" id="1day_res_#{name}" name="resolution_#{name}" value="1day")
+		label(for="1day_res_#{name}") 1 day
+	span.range
+		span.title  range
+		input.smallRange(type="radio" id="1hr_range_#{name}" name="range_#{name}" value="1hr")
+		label.smallRange(for="1hr_range_#{name}") 1 hr
+		input.smallRange(type="radio" id="6hr_range_#{name}" name="range_#{name}" value="6hr")
+		label.smallRange(for="6hr_range_#{name}") 6 hr
+		input.smallRange(type="radio" id="12hr_range_#{name}" name="range_#{name}" value="12hr")
+		label.smallRange(for="12hr_range_#{name}") 12 hr
+		input.smallRange(type="radio" id="24hr_range_#{name}" name="range_#{name}" value="24hr")
+		label.smallRange(for="24hr_range_#{name}") 24 hr
+		input.largeRange(type="radio" id="1day_range_#{name}" name="range_#{name}" value="1day")
+		label.largeRange(for="1day_rang_#{name}e") 1 day
+		input.largeRange(type="radio" id="1wk_range_#{name}" name="range_#{name}" value="1wk")
+		label.largeRange(for="1wk_range_#{name}") 1 wk
+		input.largeRange(type="radio" id="2wk_range_#{name}" name="range_#{name}" value="2wk")
+		label.largeRange(for="2wk_range_#{name}") 2 wk
+		input.largeRange(type="radio" id="1mo_range_#{name}" name="range_#{name}" value="1mo")
+		label.largeRange(for="1mo_range_#{name}") 1 mo

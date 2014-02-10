@@ -1,23 +1,39 @@
-// Hashrate storage array [timestamp, hashrate]
-var hashrate = [];
+// When loading data, don't update graphs
+var LOADING = {
+		hashRate : false,
+		balances : false
+};
 
-// Balance storage arrays [timestamp, bitcoin value]
-var sentBal = [];
-var confirmedBal = [];
-var unconvertedBal = [];
+var HISTORICAL_DATA = {
+		hashRate : [],
+		sent : [],
+		confirmed : [],
+		unconverted : []
+};
 
-// Temporary historical storage arrays
-var loadHistory = false;
-var sentBalHist = [];
-var confirmedBalHist = [];
-var unconvertedBalHist = [];
-var hashrateHist = [];
+var CURRENT_DATA = {
+		hashRate : [],
+		sent : [],
+		confirmed : [],
+		unconverted : []
+};
 
-// Graphs
-var hashRateMeter = null;
-var hashRateGraph = null;
-var balancesGraph = null;
-var graphs = [ hashRateMeter, hashRateGraph, balancesGraph ];
+var GRAPHS = {
+		hashRateMeter : null,
+		hashRateHistory : null,
+		balancesHistory : null
+};
+
+var TIME_SCALES = {
+	HASHRATE : {
+		resolution: '5min',
+		range: '24hr'
+	},
+	BALANCES : {
+		resolution: '1hr',
+		range: '1wk'
+	}
+}
 
 // Data range values
 var firstValue = new Date();
@@ -31,12 +47,13 @@ var wafflesVersion = null;
 
 // API proxy address and Bitcoin address
 var currentURL = '/current/';
-var historicalURL = '/historical/';
+var historicalHashRateURL = '/historical/hashRate/%s/%s/%s'; // /historical/hashRate/{btcAddr}/{resolution}/{range}
+var historicalBalancesURL = '/historical/balances/%s/%s/%s'; // /historical/balances/{btcAddr}/{resolution}/{range}
 var address = null;
 
 // Interval object storage, how often to update, and how often to query the API
 var intervalId = 0;
-var updateInterval = 1000 * 5; // Set to 5 seconds until history is loaded
+var updateInterval = 1000 * 1; // Set to 5 seconds until history is loaded
 var apiInterval = 1000 * 60;
 
 // Format Strings
@@ -110,9 +127,13 @@ var hashRateMeterConfig = {
 // Hashrate override configuration
 var hashRateGraphConfig = {
 	series : [ {
-		label : 'Hashrate',
+		label : 'Live Hashrate',
 		color : 'rgba(255, 61, 61, 1)'
-	} ],
+	},
+	{
+		label : 'Historical Hashrate',
+		color : 'rgba(255, 61, 61, 0.5)'
+	}],
 	axes : {
 		yaxis : {
 			tickOptions : {
@@ -125,12 +146,19 @@ var hashRateGraphConfig = {
 // Balance history override configuration
 var balanceHistoryGraphConfig = {
 	series : [ {
-		label : 'Confirmed',
+		label : 'Live Confirmed',
 		color : 'rgba(61, 255, 61, 1)'
 	}, {
-		label : 'Unconverted',
+		label : 'Live Unconverted',
 		color : 'rgba(255, 165, 61, 1)'
-	} ],
+	},
+	{
+		label : 'Historical Confirmed',
+		color : 'rgba(61, 255, 61, 0.5)'
+	}, {
+		label : 'Historical Unconverted',
+		color : 'rgba(255, 165, 61, 0.5)'
+	}],
 	axes : {
 		yaxis : {
 			tickOptions : {
@@ -145,6 +173,43 @@ $.ajaxSetup({
 	cache : false
 });
 
+$(function() {
+	$("#run").buttonset();
+	$("#hashRateTimeScale").buttonset();
+	$("#balancesTimeScale").buttonset();
+	
+	$('input:radio[name="resolution_hashRate"]').click(function() {
+		if (!LOADING.hashRate) {
+			TIME_SCALES.HASHRATE.resolution = $(this).val();
+		}
+		updateHashRateHistory();
+	});
+	
+	$('input:radio[name="range_hashRate"]').click(function() {
+		if (!LOADING.hashRate) {
+			TIME_SCALES.HASHRATE.range = $(this).val();
+		}
+		updateHashRateHistory();
+	});
+	
+	$('input:radio[name="resolution_balances"]').click(function() {
+		if (!LOADING.balances) {
+			TIME_SCALES.BALANCES.resolution = $(this).val();
+		}
+		updateBalancesHistory();
+	});
+	
+	$('input:radio[name="range_balances"]').click(function() {
+		if (!LOADING.balances) {
+			TIME_SCALES.BALANCES.range = $(this).val();
+		}
+		updateBalancesHistory();
+		
+		$('input[name="range_balances"][value="12hr"]').prop('checked', true);
+		$('#balancesTimeScale').buttonset("refresh");
+	});
+});
+
 $(document).ready(function() {
 
 	// Grab Bitcoin address
@@ -157,7 +222,8 @@ $(document).ready(function() {
 
 		initGraphs();
 		
-		getHistoricalData();
+		updateHashRateHistory();
+		updateBalancesHistory();
 
 		startInterval();
 	}
@@ -177,33 +243,76 @@ $( window ).resize(function() {
 
 function initGraphs() {
 	// Create hashrate Meter
-	hashRateMeter = $.jqplot('hashRateMeter', [ [ 1 ] ], hashRateMeterConfig);
+	GRAPHS.hashRateMeter = $.jqplot('hashRateMeter', [ [ 1 ] ], hashRateMeterConfig);
 
 	// Create hashrate graph
-	hashRateGraph = $.jqplot('hashRateGraph', [ [ null ] ], $.extend(true,
+	GRAPHS.hashRateHistory = $.jqplot('hashRateGraph', [ [ null ] ], $.extend(true,
 			graphDefaults, hashRateGraphConfig));
 
 	// Create balances graph
-	balancesGraph = $.jqplot('balancesGraph', [ [ null ] ], $.extend(true,
+	GRAPHS.balancesHistory = $.jqplot('balancesGraph', [ [ null ] ], $.extend(true,
 			graphDefaults, balanceHistoryGraphConfig));
 };
 
-function getHistoricalData() {
-	if (address != undefined) {
-		$.getJSON(historicalURL + address, function(history) {
+function updateHashRateHistory() {
+	if (!LOADING.hashRate) {
+		LOADING.hashRate = true;
+		showHashRateLoading();
+		
+		
+	}
+	
+	$('input[name="resolution_hashRate"][value="' + TIME_SCALES.HASHRATE.resolution + '"]').prop('checked', true);
+	$('input[name="range_hashRate"][value="' + TIME_SCALES.HASHRATE.range + '"]').prop('checked', true);
+	$('#hashRateTimeScale').buttonset("refresh");
+}
+
+function updateBalancesHistory() {
+	if (TIME_SCALES.BALANCES.resolution == '1hr' || TIME_SCALES.BALANCES.resolution == '1day') {
+		if ($.inArray(TIME_SCALES.BALANCES.range, ['1hr', '6hr', '12hr', '24hr'])) {
+			TIME_SCALES.BALANCES.range = '1day';
+		}
+		$('#balancesTimeScale .smallRange').hide();
+		$('#balancesTimeScale .largeRange').show();
+	} else {
+		if (!$.inArray(TIME_SCALES.BALANCES.range, ['1hr', '6hr', '12hr', '24hr'])) {
+			TIME_SCALES.BALANCES.range = '24hr';
+		}
+		$('#balancesTimeScale .largeRange').hide();
+		$('#balancesTimeScale .smallRange').show();
+	}
+	
+	/*if (!LOADING.balances) {
+		LOADING.balances = true;
+		showBalancesLoading();
+		
+		var url = sprintf(historicalHashRateURL, address);
+		$.getJSON(url, function(history) {
 			if (history !== undefined && history.length > 0) {
 				prepareHistoricalData(history);
-			} else {
-				// Reset the interval (timer) to only run as often as the API updates
-				resetInterval(apiInterval);
+			}
+		});
+	}*/
+	
+	$('input[name="resolution_balances"][value="' + TIME_SCALES.BALANCES.resolution + '"]').prop('checked', true);
+	$('input[name="range_balances"][value="' + TIME_SCALES.BALANCES.range + '"]').prop('checked', true);
+	$('#balancesTimeScale').buttonset("refresh");
+}
+
+function getHistoricalData() {
+	if (address != undefined) {
+		showLoading('Loading historical data...');
+		
+		var url = sprintf(historicalBalancesURL, address);
+		$.getJSON(url, function(history) {
+			if (history !== undefined && history.length > 0) {
+				prepareHistoricalData(history);
 			}
 		});
 	}
 }
 
 function prepareHistoricalData(history) {
-	showLoading('Loading historical data...');
-	
 	var histLen = history.length;
 
 	for (var i = 0; i < histLen; i++) {
@@ -218,12 +327,12 @@ function prepareHistoricalData(history) {
 			lastUpdate = date;
 		}
 		
-		sentBalHist.push([ date, data.balances.sent ]);
-		confirmedBalHist.push([ date, data.balances.confirmed ]);
-		unconvertedBalHist.push([ date, data.balances.unconverted ]);
+		HISTORICAL_DATA.sent.push([ date, data.balances.sent ]);
+		HISTORICAL_DATA.confirmed.push([ date, data.balances.confirmed ]);
+		HISTORICAL_DATA.unconverted.push([ date, data.balances.unconverted ]);
 
 		var khashrate = data.hashRate / 1000.0;
-		hashrateHist.push([ date, khashrate ]);
+		HISTORICAL_DATA.hashRate.push([ date, khashrate ]);
 	}
 	
 	loadHistory = true;
@@ -260,8 +369,10 @@ function updateAPI() {
 }
 
 function updateGUI() {
-
-	loadHistoricalData();
+	/*if (loadHistory === true) {
+		loadHistory = false;
+		hideLoading();
+	}*/
 	
 	replotGraphs();
 	updateValues();
@@ -283,12 +394,12 @@ function updateGraphDataArrays(date, data) {
 	if (cacheID != data.cacheID) {
 		var formatted = formatAPIValues(data);
 		
-		sentBal.push([ date, formatted.balances.sent ]);
-		confirmedBal.push([ date, formatted.balances.confirmed ]);
-		unconvertedBal.push([ date, formatted.balances.unconverted ]);
+		CURRENT_DATA.sent.push([ date, formatted.balances.sent ]);
+		CURRENT_DATA.confirmed.push([ date, formatted.balances.confirmed ]);
+		CURRENT_DATA.unconverted.push([ date, formatted.balances.unconverted ]);
 	
 		var khashrate = formatted.hashRate / 1000.0;
-		hashrate.push([ date, khashrate ]);
+		CURRENT_DATA.hashRate.push([ date, khashrate ]);
 		
 		cacheID = data.cacheID;
 	}
@@ -305,35 +416,13 @@ function formatAPIValues(data) {
 	};
 }
 
-function loadHistoricalData() {
-	if (loadHistory === true) {
-		// Merge historical data with current data
-		sentBal = sentBalHist.concat(sentBal);
-		confirmedBal = confirmedBalHist.concat(confirmedBal);
-		unconvertedBal = unconvertedBalHist.concat(unconvertedBal);
-		hashrate = hashrateHist.concat(hashrate);
-		
-		// Clear historical data arrays
-		sentBalHist.length = 0;
-		confirmedBalHist.length = 0;
-		unconvertedBalHist.length = 0;
-		hashrateHist.length = 0;
-		
-		// Reset the interval (timer) to only run as often as the API updates
-		resetInterval(apiInterval);
-		
-		loadHistory = false;
-		hideLoading();
-	}
-}
-
 function replotGraphs() {
-	hashRateMeter.resetAxesScale();
-	hashRateMeter.replot({
-		data : [ [ getLastValue(hashrate, 1, 1) ] ],
+	GRAPHS.hashRateMeter.resetAxesScale();
+	GRAPHS.hashRateMeter.replot({
+		data : [ [ getLastValue(CURRENT_DATA.hashRate, 1, 1) ] ],
 		seriesDefaults : {
 			rendererOptions : {
-				label : sprintf(hashrateFormatString, getLastValue(hashrate, 1, 0))
+				label : sprintf(hashrateFormatString, getLastValue(CURRENT_DATA.hashRate, 1, 1))
 			}
 		}
 	});
@@ -341,7 +430,7 @@ function replotGraphs() {
 	var tickValues = getTickValues();
 
 	var hashRateReplotObject = {
-		data : [ hashrate ],
+		data : [ CURRENT_DATA.hashRate, HISTORICAL_DATA.hashRate ],
 		axes : {
 			xaxis : {
 				tickInterval : tickValues[0],
@@ -353,17 +442,17 @@ function replotGraphs() {
 	};
 
 	// Hash Rate Historical Graph Replot
-	if (hashrate.length > graph_ReplotNum) {
+	//if (hashrate.length > graph_ReplotNum) {
 		hashRateReplotObject = $.extend(true, hashRateReplotObject,
 				graph_ReplotConfig);
-	}
+	//}
 
-	hashRateGraph.resetAxesScale();
-	hashRateGraph.replot(hashRateReplotObject);
+	GRAPHS.hashRateHistory.resetAxesScale();
+	GRAPHS.hashRateHistory.replot(hashRateReplotObject);
 
 	// Balances Historical Graph Replot
 	var balancesReplotObject = {
-		data : [ confirmedBal, unconvertedBal ],
+		data : [ CURRENT_DATA.confirmed, CURRENT_DATA.unconverted, HISTORICAL_DATA.confirmed, HISTORICAL_DATA.unconverted ],
 		axes : {
 			xaxis : {
 				tickInterval : tickValues[0],
@@ -374,13 +463,13 @@ function replotGraphs() {
 		}
 	};
 
-	if (confirmedBal.length > graph_ReplotNum) {
+	//if (confirmedBal.length > graph_ReplotNum) {
 		balancesReplotObject = $.extend(true, balancesReplotObject,
 				graph_ReplotConfig);
-	}
+	//}
 
-	balancesGraph.resetAxesScale();
-	balancesGraph.replot(balancesReplotObject);
+	GRAPHS.balancesHistory.resetAxesScale();
+	GRAPHS.balancesHistory.replot(balancesReplotObject);
 }
 
 /**
@@ -389,7 +478,7 @@ function replotGraphs() {
 function getTickValues() {
 	var values = ['1 minute', '%H:%M:%S'];
 	
-	if (hashrate.length > 0) {
+	//if (hashrate.length > 0) {
 		var startTimestamp = firstValue.getTime();
 		var endTimestamp = lastUpdate.getTime();
 		
@@ -411,7 +500,7 @@ function getTickValues() {
 		} else if (minutes > 5) {
 			values = ['5 minute', '%H:%M:%S'];
 		}
-	}
+	//}
 	
 	return values;
 }
@@ -419,9 +508,9 @@ function getTickValues() {
 function updateValues() {
 	updateHashrateMetrics();
 	
-	var currentSentBalance = getLastValue(sentBal, 1, 0);
-	var currentConfirmedBalance = getLastValue(confirmedBal, 1, 0);
-	var currentUnconvertedBalance = getLastValue(unconvertedBal, 1, 0);
+	var currentSentBalance = getLastValue(CURRENT_DATA.sent, 1, 0);
+	var currentConfirmedBalance = getLastValue(CURRENT_DATA.confirmed, 1, 0);
+	var currentUnconvertedBalance = getLastValue(CURRENT_DATA.unconverted, 1, 0);
 	
 	$('#sentBalance').html(sprintf(bitcoinFormatString, currentSentBalance));
 	$('#confirmedBalance').html(sprintf(bitcoinFormatString, currentConfirmedBalance));
@@ -444,16 +533,16 @@ function getLastValue(array, index, undefVal) {
 }
 
 function updateHashrateMetrics() {
-	var length = hashrate.length;
+	var length = CURRENT_DATA.hashRate.length;
 	
 	if (length > 0) {
-		var min = hashrate[0][1];
-		var max = hashrate[0][1];
-		var sum = hashrate[0][1];
+		var min = CURRENT_DATA.hashRate[0][1];
+		var max = CURRENT_DATA.hashRate[0][1];
+		var sum = CURRENT_DATA.hashRate[0][1];
 		
 		if (length > 1) {
-			for (var i = 1; i < hashrate.length; i++) {
-				var val = hashrate[i][1];
+			for (var i = 1; i < length; i++) {
+				var val = CURRENT_DATA.hashRate[i][1];
 				min = Math.min(min, val);
 				max = Math.max(max, val);
 				sum += val;
@@ -479,16 +568,22 @@ function hideError() {
 	}
 }
 
-function showLoading(str) {
-	$('#loading').html(str);
-	$('#loading').slideDown("slow");
+function showHashRateLoading() {
+	$('#hashRateHistoryLoading').show();
 }
 
-function hideLoading() {
-	if ($('#loading').is(":visible")) {
-		$('#loading').slideUp("slow");
-	}
+function hideHashRateLoading() {
+	$('#hashRateHistoryLoading').hide();
 }
+
+function showBalancesLoading() {
+	$('#balancesHistoryLoading').show();
+}
+
+function hideBalancesLoading() {
+	$('#balancesHistoryLoading').hide();
+}
+
 
 function startInterval() {
 	if (intervalId == 0) {
