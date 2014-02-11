@@ -22,7 +22,7 @@ var historical = require('./routes/historical')(app, rclient);
 
 app.configure(function() {
 	// Waffles Version Info
-	app.set('wafflesVersion', '0.5');
+	app.set('wafflesVersion', '0.51');
 
 	// all environments
 	app.set('port', process.env.PORT || 3000);
