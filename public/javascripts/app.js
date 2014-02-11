@@ -200,7 +200,7 @@ $.ajaxSetup({
 $(document).ready(function() {
 
 	// Grab Bitcoin address
-	address = $.getUrlVar('address').trim();
+	address = $.getUrlVar('address').trim().replace('#','');
 	
 	if (address === undefined || !btcAddressRegex.test(address)) {
 		console.log(sprintf('BTC Address \'%s\' failed regex check.', address));
