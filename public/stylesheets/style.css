@@ -135,15 +135,9 @@ a:hover {
 
 .timeScale div {
 	display: inline;
-}
-
-.timeScale span {
-	padding-left: 7px;
-}
-
-.timeScale .title {
 	font-weight: bold;
 	font-size: 11px;
+	padding-left: 7px;
 }
 
 .timeScale .ui-button.ui-widget {
