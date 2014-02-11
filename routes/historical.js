@@ -13,11 +13,12 @@ var TWELVE_HOUR = '12hr';
 var TWENTYFOUR_HOUR = '24hr';
 var ONE_DAY = '1day';
 var ONE_WEEK = '1wk';
+var TWO_WEEK = '2wk';
 var ONE_MONTH = '1mo';
 var TWO_MONTH = '2mo';
 
 var validResolutions = [ONE_MINUTE, FIVE_MINUTE, ONE_HOUR, ONE_DAY];
-var validRanges = [ONE_HOUR, SIX_HOUR, TWELVE_HOUR, TWENTYFOUR_HOUR, ONE_DAY, ONE_WEEK, ONE_MONTH];
+var validRanges = [ONE_HOUR, SIX_HOUR, TWELVE_HOUR, TWENTYFOUR_HOUR, ONE_DAY, ONE_WEEK, TWO_WEEK, ONE_MONTH];
 
 var rangesAbove = 4, onlyAcceptResolutionsAbove = 2; // If a range is larger than ONE_DAY, only allow resolutions above FIVE_MINUTE
 
@@ -387,6 +388,8 @@ function getHours(range) {
 		return 24;
 	case ONE_WEEK:
 		return 24*7;
+	case TWO_WEEK:
+		return 24*7*2;
 	case ONE_MONTH:
 		return 24*7*4;
 	case TWO_MONTH:
