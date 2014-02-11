@@ -1,6 +1,14 @@
 extends layout
 
 block content
+	div#idleMessage.dialog(title="Fat-Free Mode" style="display: none;")
+		p
+			span.ui-icon.ui-icon-info(style="float:left; margin:0 7px 50px 0;")
+			| Your WAFFLEStats has gone in to Fat-Free Mode...
+			b But don't worry, your stats are still being collected!
+		p This mode is to ensure that your browser doesn't run out of memory and become bogged down by the large amount of data that may build up when you aren't viewing your stats.
+		p Simply close this dialog to gorge yourself on the full-fat stats.
+
 	div#versionOutOfDate Your current version is out of date. Refresh to update.
 	div#error
 	div#loading
@@ -23,11 +31,7 @@ block content
 					span.key Last Updated:&nbsp;
 					span#lastUpdatedValue Never
 				div#controls
-					span#run
-						input(type="radio" id="start" name="run" checked="checked")
-						label(for="start") Start
-						input(type="radio" id="stop" name="run")
-						label(for="stop") Stop
+					input(type="submit" id="idleMode" value="Fat-Free Mode")
 							
 			div#userStats
 				include userStats

@@ -134,9 +134,7 @@ function getHashRateAggregatePipeline(btcAddr, resolution, fromDate) {
 	
 	var appendMinutes = false;
 	var appendHours = false;
-	
-	var minuteModVal;
-	
+
 	switch(resolution) {
 	case ONE_MINUTE:
 	case FIVE_MINUTE:
@@ -260,8 +258,6 @@ function getBalanceAggregatePipeline(btcAddr, resolution, fromDate) {
 	var appendMinutes = false;
 	var appendHours = false;
 	
-	var minuteModVal;
-	
 	switch(resolution) {
 	case ONE_MINUTE:
 	case FIVE_MINUTE:
@@ -347,13 +343,13 @@ function getBalanceAggregatePipeline(btcAddr, resolution, fromDate) {
                         $sum: 1
                     },
                 	"sent" : {
-                		$avg: "$sent"
+                		$avg: "$balances.sent"
                 	},
                 	"confirmed" : {
-                		$avg: "$confirmed"
+                		$avg: "$balances.confirmed"
                 	},
                 	"unconverted" : {
-                        $avg: "$unconverted" 
+                        $avg: "$balances.unconverted" 
                 	}
                 }
         },

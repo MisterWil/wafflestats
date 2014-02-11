@@ -1,7 +1,13 @@
-// When loading data, don't update graphs
+var STATES = {
+		// Used for History Loading State
+		READY: 0,
+		LOADING: 1,
+		LOADED: 2,
+};
+
 var LOADING = {
-		hashRate : false,
-		balances : false
+	hashRate: STATES.READY,
+	balances: STATES.READY
 };
 
 var HISTORICAL_DATA = {
@@ -16,6 +22,17 @@ var CURRENT_DATA = {
 		sent : [],
 		confirmed : [],
 		unconverted : []
+};
+
+var DATA_RANGE = {
+		HASHRATE : {
+			firstValue : new Date(),
+			lastValue : new Date()
+		},
+		BALANCES : {
+			firstValue : new Date(),
+			lastValue : new Date()
+		}
 };
 
 var GRAPHS = {
@@ -33,10 +50,16 @@ var TIME_SCALES = {
 		resolution: '1hr',
 		range: '1wk'
 	}
-}
+};
 
-// Data range values
-var firstValue = new Date();
+var APP = {
+	visible: true,
+	loaded: false,
+	idle: false,
+	hiddenTime: new Date(0)
+};
+
+// Last API Update
 var lastUpdate = new Date(0);
 
 // Last result cacheID
@@ -55,6 +78,7 @@ var address = null;
 var intervalId = 0;
 var updateInterval = 1000 * 1; // Set to 5 seconds until history is loaded
 var apiInterval = 1000 * 60;
+var idleTimeout = 1000 * 5;
 
 // Format Strings
 var hashrateFormatString = "%.2f kH/s";
@@ -70,7 +94,7 @@ var graphDefaults = {
         shadow: false,
 		markerOptions : {
 			show : true,
-			size : 8
+			size : 4
 		}
 	},
 	axesDefaults : {
@@ -173,73 +197,142 @@ $.ajaxSetup({
 	cache : false
 });
 
-$(function() {
-	$("#run").buttonset();
-	$("#hashRateTimeScale").buttonset();
-	$("#balancesTimeScale").buttonset();
-	
-	$('input:radio[name="resolution_hashRate"]').click(function() {
-		if (!LOADING.hashRate) {
-			TIME_SCALES.HASHRATE.resolution = $(this).val();
-		}
-		updateHashRateHistory();
-	});
-	
-	$('input:radio[name="range_hashRate"]').click(function() {
-		if (!LOADING.hashRate) {
-			TIME_SCALES.HASHRATE.range = $(this).val();
-		}
-		updateHashRateHistory();
-	});
-	
-	$('input:radio[name="resolution_balances"]').click(function() {
-		if (!LOADING.balances) {
-			TIME_SCALES.BALANCES.resolution = $(this).val();
-		}
-		updateBalancesHistory();
-	});
-	
-	$('input:radio[name="range_balances"]').click(function() {
-		if (!LOADING.balances) {
-			TIME_SCALES.BALANCES.range = $(this).val();
-		}
-		updateBalancesHistory();
-		
-		$('input[name="range_balances"][value="12hr"]').prop('checked', true);
-		$('#balancesTimeScale').buttonset("refresh");
-	});
-});
-
 $(document).ready(function() {
 
 	// Grab Bitcoin address
 	address = $.getUrlVar('address').trim();
+	
+	if (address === undefined || !btcAddressRegex.test(address)) {
+		console.log(sprintf('BTC Address \'%s\' failed regex check.', address));
+	}
+	
+	// Setup focus handler
+	setupFocusHandler();
 
 	if (address === undefined) {
 		$("#welcomePage").show();
 	} else {
 		$("#waffleStats").show();
 
+		initControls();
+		
 		initGraphs();
 		
-		updateHashRateHistory();
-		updateBalancesHistory();
+		loadHistoricalData();
 
 		startInterval();
 	}
-	
-	$("#start").click(function() {
-		startInterval();
-	});
-	
-	$("#stop").click(function() {
-		stopInterval();
-	});
 });
 
 $( window ).resize(function() {
 	replotGraphs();
 });
+
+function setupFocusHandler() {
+	var hidden = "hidden";
+
+	// Standards:
+	if (hidden in document) {
+		document.addEventListener("visibilitychange", onchange);
+	} else if ((hidden = "mozHidden") in document) {
+		document.addEventListener("mozvisibilitychange", onchange);
+	} else if ((hidden = "webkitHidden") in document) {
+		document.addEventListener("webkitvisibilitychange", onchange);
+	} else if ((hidden = "msHidden") in document) {
+		document.addEventListener("msvisibilitychange", onchange);
+	} else if ('onfocusin' in document) {
+		// IE 9 and lower:
+		document.onfocusin = document.onfocusout = onchange;
+	} else {
+		// All others:
+		window.onpageshow = window.onpagehide = window.onfocus = window.onblur = onchange;
+	}
+
+	function onchange(evt) {
+		var v = 'visible', h = 'hidden';
+		var state = v;
+		
+		var evtMap = {
+			focus : v,
+			focusin : v,
+			pageshow : v,
+			blur : h,
+			focusout : h,
+			pagehide : h
+		};
+
+		evt = evt || window.event;
+
+		if (evt.type in evtMap) {
+			state = evtMap[evt.type];
+		} else {
+			state = this[hidden] ? "hidden" : "visible";
+		}
+
+		if (state === h) {
+			APP.visible = false;
+			console.log('invisible');
+			APP.hiddenTime = new Date();
+		} else {
+			APP.visible = true;
+			console.log('visible');
+		}
+	}
+}
+
+function initControls() {
+	$("#idleMessage").dialog({
+	      modal: true,
+	      autoOpen: false,
+	      close: function(event, ui) {
+	    	  APP.idle = false;
+	      },
+	      buttons: {
+	          "Mmm, Fat!": function() {
+	            $( this ).dialog( "close" );
+	          }
+	      }
+	});
+	
+	$("#idleMode").button().click(function (event) {
+		APP.idle = true;
+		openIdleDialog();
+	});
+	
+	$("#range_hashRate").buttonset({ items: ":radio:visible" });
+	$("#resolution_hashRate").buttonset({ items: ":radio:visible" });
+	
+	$("#range_balances").buttonset({ items: ":radio:visible" });
+	$("#resolution_balances").buttonset({ items: ":radio:visible" });
+	
+	$('input:radio[name="resolution_hashRate"]').click(function() {
+		if (LOADING.hashRate === STATES.READY) {
+			TIME_SCALES.HASHRATE.resolution = $(this).val();
+		}
+		updateHashRateHistory();
+	});
+	
+	$('input:radio[name="range_hashRate"]').click(function() {
+		if (LOADING.hashRate === STATES.READY) {
+			TIME_SCALES.HASHRATE.range = $(this).val();
+		}
+		updateHashRateHistory();
+	});
+	
+	$('input:radio[name="resolution_balances"]').click(function() {
+		if (LOADING.balances === STATES.READY) {
+			TIME_SCALES.BALANCES.resolution = $(this).val();
+		}
+		updateBalancesHistory();
+	});
+	
+	$('input:radio[name="range_balances"]').click(function() {
+		if (LOADING.balances === STATES.READY) {
+			TIME_SCALES.BALANCES.range = $(this).val();
+		}
+		updateBalancesHistory();
+	});
+}
 
 function initGraphs() {
 	// Create hashrate Meter
@@ -254,126 +347,206 @@ function initGraphs() {
 			graphDefaults, balanceHistoryGraphConfig));
 };
 
+function loadHistoricalData() {
+	console.log('LOADING DATA');
+	
+	updateHashRateHistory();
+	updateBalancesHistory();
+	
+	APP.loaded = true;
+}
+
+function unloadHistoricalData() {
+	console.log('UNLOADING DATA');
+	
+	clearHistoricalHashRate();
+	clearHistoricalBalances();
+	
+	APP.loaded = false;
+}
+
 function updateHashRateHistory() {
-	if (!LOADING.hashRate) {
-		LOADING.hashRate = true;
+	TIME_SCALES.HASHRATE.range = setTimeScaleRange(TIME_SCALES.HASHRATE.range,
+			TIME_SCALES.HASHRATE.resolution, 'hashRate');
+	
+	if (LOADING.hashRate === STATES.READY) {
+		LOADING.hashRate = STATES.LOADING;
 		showHashRateLoading();
 		
-		
+		var url = sprintf(historicalHashRateURL, address, TIME_SCALES.HASHRATE.resolution, TIME_SCALES.HASHRATE.range);
+		$.getJSON(url, function(history) {
+			if (history !== undefined && history.length > 0) {
+				processHistoricalHashRate(history);
+			}
+			LOADING.hashRate = STATES.LOADED;
+		});
 	}
-	
-	$('input[name="resolution_hashRate"][value="' + TIME_SCALES.HASHRATE.resolution + '"]').prop('checked', true);
-	$('input[name="range_hashRate"][value="' + TIME_SCALES.HASHRATE.range + '"]').prop('checked', true);
-	$('#hashRateTimeScale').buttonset("refresh");
+
+	updateTimeScales(TIME_SCALES.HASHRATE.range, TIME_SCALES.HASHRATE.resolution, 'hashRate');
 }
 
 function updateBalancesHistory() {
-	if (TIME_SCALES.BALANCES.resolution == '1hr' || TIME_SCALES.BALANCES.resolution == '1day') {
-		if ($.inArray(TIME_SCALES.BALANCES.range, ['1hr', '6hr', '12hr', '24hr'])) {
-			TIME_SCALES.BALANCES.range = '1day';
-		}
-		$('#balancesTimeScale .smallRange').hide();
-		$('#balancesTimeScale .largeRange').show();
-	} else {
-		if (!$.inArray(TIME_SCALES.BALANCES.range, ['1hr', '6hr', '12hr', '24hr'])) {
-			TIME_SCALES.BALANCES.range = '24hr';
-		}
-		$('#balancesTimeScale .largeRange').hide();
-		$('#balancesTimeScale .smallRange').show();
-	}
+	TIME_SCALES.BALANCES.range = setTimeScaleRange(TIME_SCALES.BALANCES.range,
+			TIME_SCALES.BALANCES.resolution, 'balances');
 	
-	/*if (!LOADING.balances) {
-		LOADING.balances = true;
+	if (LOADING.balances === STATES.READY) {
+		LOADING.balances = STATES.LOADING;
 		showBalancesLoading();
 		
-		var url = sprintf(historicalHashRateURL, address);
+		var url = sprintf(historicalBalancesURL, address, TIME_SCALES.BALANCES.resolution, TIME_SCALES.BALANCES.range);
 		$.getJSON(url, function(history) {
 			if (history !== undefined && history.length > 0) {
-				prepareHistoricalData(history);
+				processHistoricalBalances(history);
 			}
-		});
-	}*/
-	
-	$('input[name="resolution_balances"][value="' + TIME_SCALES.BALANCES.resolution + '"]').prop('checked', true);
-	$('input[name="range_balances"][value="' + TIME_SCALES.BALANCES.range + '"]').prop('checked', true);
-	$('#balancesTimeScale').buttonset("refresh");
-}
-
-function getHistoricalData() {
-	if (address != undefined) {
-		showLoading('Loading historical data...');
-		
-		var url = sprintf(historicalBalancesURL, address);
-		$.getJSON(url, function(history) {
-			if (history !== undefined && history.length > 0) {
-				prepareHistoricalData(history);
-			}
+			LOADING.balances = STATES.LOADED;
 		});
 	}
+	
+	updateTimeScales(TIME_SCALES.BALANCES.range, TIME_SCALES.BALANCES.resolution, 'balances');
 }
 
-function prepareHistoricalData(history) {
+function setTimeScaleRange(range, resolution, id) {
+	if (resolution == '1hr' || resolution == '1day') {
+		if ($.inArray(range, ['1hr', '6hr', '12hr', '24hr']) !== -1) {
+			range = '1day';
+		}
+		$("#range_" + id + ' .smallRange').hide();
+		$("#range_" + id + ' .largeRange').show();
+	} else {
+		if ($.inArray(range, ['1day', '1wk', '2wk', '1mo']) !== -1) {
+			range = '24hr';
+		}
+		$("#range_" + id + ' .smallRange').show();
+		$("#range_" + id + ' .largeRange').hide();
+	}
+	
+	return range;
+}
+
+function updateTimeScales(range, resolution, id) {
+	$('input[name="range_'+id+'"][value="' + range + '"]').prop('checked', true);
+	$("#range_"+id).buttonset("refresh");
+	
+	$('input[name="resolution_'+id+'"][value="' + resolution + '"]').prop('checked', true);
+	$("#resolution_"+id).buttonset("refresh");
+}
+
+function processHistoricalHashRate(history) {
 	var histLen = history.length;
+	
+	clearHistoricalHashRate();
 
 	for (var i = 0; i < histLen; i++) {
 		var data = history[i];
 		var date = new Date(data.createdAt);
 		
-		if (date.getTime() < firstValue.getTime()) {
-			firstValue = date;
+		if (date.getTime() < DATA_RANGE.HASHRATE.firstValue.getTime()) {
+			DATA_RANGE.HASHRATE.firstValue = date;
 		}
 		
-		if (date.getTime() > lastUpdate.getTime()) {
-			lastUpdate = date;
+		if (date.getTime() > DATA_RANGE.HASHRATE.lastValue.getTime()) {
+			DATA_RANGE.HASHRATE.lastValue = date;
+		}
+
+		var khashrate = data.hashRate / 1000.0;
+		HISTORICAL_DATA.hashRate.push([ date, khashrate ]);
+	}
+}
+
+function processHistoricalBalances(history) {
+	var histLen = history.length;
+	
+	clearHistoricalBalances();
+	
+	for (var i = 0; i < histLen; i++) {
+		var data = history[i];
+		var date = new Date(data.createdAt);
+		
+		if (date.getTime() < DATA_RANGE.BALANCES.firstValue.getTime()) {
+			DATA_RANGE.BALANCES.firstValue = date;
+		}
+		
+		if (date.getTime() > DATA_RANGE.BALANCES.lastValue.getTime()) {
+			DATA_RANGE.BALANCES.lastValue = date;
 		}
 		
 		HISTORICAL_DATA.sent.push([ date, data.balances.sent ]);
 		HISTORICAL_DATA.confirmed.push([ date, data.balances.confirmed ]);
 		HISTORICAL_DATA.unconverted.push([ date, data.balances.unconverted ]);
-
-		var khashrate = data.hashRate / 1000.0;
-		HISTORICAL_DATA.hashRate.push([ date, khashrate ]);
 	}
+}
+
+function clearHistoricalHashRate() {
+	DATA_RANGE.HASHRATE.firstValue = new Date();
+	DATA_RANGE.HASHRATE.lastValue = new Date();
 	
-	loadHistory = true;
+	HISTORICAL_DATA.hashRate = [];
+}
+
+function clearHistoricalBalances() {
+	DATA_RANGE.BALANCES.firstValue = new Date();
+	DATA_RANGE.BALANCES.lastValue = new Date();
+	
+	HISTORICAL_DATA.sent = [];
+	HISTORICAL_DATA.confirmed = [];
+	HISTORICAL_DATA.unconverted = [];
 }
 
 function doUpdate() {
-	if (address != undefined && btcAddressRegex.test(address)) {
-		var lastAPICall = new Date().getTime() - lastUpdate.getTime();
-		
-		if (lastAPICall >= apiInterval) {
+	var lastAPICall = new Date().getTime() - lastUpdate.getTime();	
+	
+	if (lastAPICall >= apiInterval) {
+		if (address != undefined && btcAddressRegex.test(address)) {
 			updateAPI();
 		}
 	}
 	
-	updateGUI();
-};
+	checkIdle();
+	
+	if (APP.idle && APP.loaded) {
+		unloadHistoricalData();
+		openIdleDialog();
+		updateGUI();
+	} else if (!APP.idle && !APP.loaded) {
+		loadHistoricalData();
+	} else if (!APP.idle && APP.loaded) {
+		updateGUI();
+	}
+}
+
+function checkIdle() {
+	if (!APP.visible && !APP.idle) {
+		var hiddenDuration = new Date().getTime() - APP.hiddenTime.getTime();
+		
+		if (hiddenDuration >= idleTimeout) {
+			APP.idle = true;
+		}
+	}
+}
 
 function updateAPI() {
+	lastUpdate = new Date();
+	
 	$.getJSON(currentURL + address, function(data) {
 		if (data !== undefined && data.error == "" || data.error === undefined) {
-			lastUpdate = new Date();
-
 			hideError();
 
 			performVersionCheck(data);
 
-			updateGraphDataArrays(lastUpdate, data);
+			// Only fill data arrays when not idle
+			if (!APP.idle) {
+				updateGraphDataArrays(new Date(), data);
+			}
 		} else {
 			showError(data.error);
 		}
 	}).error(function(err) {
-		showError('Local server is unreachable.');
+		showError('Local Server Unreachable');
 	});
 }
 
 function updateGUI() {
-	/*if (loadHistory === true) {
-		loadHistory = false;
-		hideLoading();
-	}*/
-	
+	checkLoaded();
 	replotGraphs();
 	updateValues();
 }
@@ -393,6 +566,9 @@ function performVersionCheck(data) {
 function updateGraphDataArrays(date, data) {
 	if (cacheID != data.cacheID) {
 		var formatted = formatAPIValues(data);
+		
+		DATA_RANGE.HASHRATE.lastValue = date;
+		DATA_RANGE.BALANCES.lastValue = date;
 		
 		CURRENT_DATA.sent.push([ date, formatted.balances.sent ]);
 		CURRENT_DATA.confirmed.push([ date, formatted.balances.confirmed ]);
@@ -416,91 +592,95 @@ function formatAPIValues(data) {
 	};
 }
 
+function checkLoaded() {
+	if (LOADING.hashRate === STATES.LOADED) {
+		LOADING.hashRate = STATES.READY;
+		hideHashRateLoading();
+	}
+	
+	if (LOADING.balances === STATES.LOADED) {
+		LOADING.balances = STATES.READY;
+		hideBalancesLoading();
+	}
+}
+
 function replotGraphs() {
+	// Replot Hash Rate Meter
 	GRAPHS.hashRateMeter.resetAxesScale();
 	GRAPHS.hashRateMeter.replot({
 		data : [ [ getLastValue(CURRENT_DATA.hashRate, 1, 1) ] ],
 		seriesDefaults : {
 			rendererOptions : {
-				label : sprintf(hashrateFormatString, getLastValue(CURRENT_DATA.hashRate, 1, 1))
+				label : sprintf(hashrateFormatString, getLastValue(CURRENT_DATA.hashRate, 1, 0))
 			}
 		}
 	});
 	
-	var tickValues = getTickValues();
-
-	var hashRateReplotObject = {
-		data : [ CURRENT_DATA.hashRate, HISTORICAL_DATA.hashRate ],
-		axes : {
-			xaxis : {
-				tickInterval : tickValues[0],
-				tickOptions : {
-					formatString : tickValues[1]
+	// Replot Hash Rate History Graph
+	if (LOADING.hashRate === STATES.READY) {
+		var hashRateTickValues = getTickValues(DATA_RANGE.HASHRATE.firstValue, DATA_RANGE.HASHRATE.lastValue);
+		
+		var hashRateReplotObject = {
+			data : [ CURRENT_DATA.hashRate, HISTORICAL_DATA.hashRate ],
+			axes : {
+				xaxis : {
+					tickInterval : hashRateTickValues[0],
+					tickOptions : {
+						formatString : hashRateTickValues[1]
+					}
 				}
 			}
-		}
-	};
+		};
+	
+		GRAPHS.hashRateHistory.resetAxesScale();
+		GRAPHS.hashRateHistory.replot(hashRateReplotObject);
+	}
 
-	// Hash Rate Historical Graph Replot
-	//if (hashrate.length > graph_ReplotNum) {
-		hashRateReplotObject = $.extend(true, hashRateReplotObject,
-				graph_ReplotConfig);
-	//}
-
-	GRAPHS.hashRateHistory.resetAxesScale();
-	GRAPHS.hashRateHistory.replot(hashRateReplotObject);
-
-	// Balances Historical Graph Replot
-	var balancesReplotObject = {
-		data : [ CURRENT_DATA.confirmed, CURRENT_DATA.unconverted, HISTORICAL_DATA.confirmed, HISTORICAL_DATA.unconverted ],
-		axes : {
-			xaxis : {
-				tickInterval : tickValues[0],
-				tickOptions : {
-					formatString : tickValues[1]
+	// Replot Balances History Graph
+	if (LOADING.balances === STATES.READY) {
+		var balancesTickValues = getTickValues(DATA_RANGE.BALANCES.firstValue, DATA_RANGE.BALANCES.lastValue);
+		
+		var balancesReplotObject = {
+			data : [ CURRENT_DATA.confirmed, CURRENT_DATA.unconverted, HISTORICAL_DATA.confirmed, HISTORICAL_DATA.unconverted ],
+			axes : {
+				xaxis : {
+					tickInterval : balancesTickValues[0],
+					tickOptions : {
+						formatString : balancesTickValues[1]
+					}
 				}
 			}
-		}
-	};
-
-	//if (confirmedBal.length > graph_ReplotNum) {
-		balancesReplotObject = $.extend(true, balancesReplotObject,
-				graph_ReplotConfig);
-	//}
-
-	GRAPHS.balancesHistory.resetAxesScale();
-	GRAPHS.balancesHistory.replot(balancesReplotObject);
+		};
+	
+		GRAPHS.balancesHistory.resetAxesScale();
+		GRAPHS.balancesHistory.replot(balancesReplotObject);
+	}
 }
 
 /**
  * @returns An array containing the tickInterval and the formatString
  */
-function getTickValues() {
+function getTickValues(firstValue, lastValue) {
 	var values = ['1 minute', '%H:%M:%S'];
 	
-	//if (hashrate.length > 0) {
-		var startTimestamp = firstValue.getTime();
-		var endTimestamp = lastUpdate.getTime();
-		
-		var totalTime = endTimestamp - startTimestamp;
-		
-		var hours=(totalTime/(1000*60*60));
-		var minutes=(totalTime/(1000*60));
+	var totalTime = lastValue.getTime() - firstValue.getTime();
+	
+	var hours=(totalTime/(1000*60*60));
+	var minutes=(totalTime/(1000*60));
 
-		if (hours > 60) {
-			values = ['1 day', '%b %d %H:%M:%S'];
-		} else if (hours > 18) {
-			values = ['12 hours', '%b %d %H:%M:%S'];
-		} else if (hours > 5) {
-			values = ['6 hours', '%b %d %H:%M:%S'];
-		} else if (minutes > 59) {
-			values = ['60 minutes', '%H:%M:%S'];
-		} else if (minutes > 25) {
-			values = ['10 minutes', '%H:%M:%S'];
-		} else if (minutes > 5) {
-			values = ['5 minute', '%H:%M:%S'];
-		}
-	//}
+	if (hours > 60) {
+		values = ['1 day', '%b %d %H:%M:%S'];
+	} else if (hours > 18) {
+		values = ['12 hours', '%b %d %H:%M:%S'];
+	} else if (hours > 5) {
+		values = ['6 hours', '%b %d %H:%M:%S'];
+	} else if (minutes > 59) {
+		values = ['60 minutes', '%H:%M:%S'];
+	} else if (minutes > 25) {
+		values = ['10 minutes', '%H:%M:%S'];
+	} else if (minutes > 5) {
+		values = ['5 minute', '%H:%M:%S'];
+	}
 	
 	return values;
 }
@@ -519,7 +699,11 @@ function updateValues() {
 	var totalUnsentBalance = currentConfirmedBalance + currentUnconvertedBalance;
 	$('#totalUnsent').html(sprintf(bitcoinFormatString, totalUnsentBalance));
 
-	$('#lastUpdatedValue').html(lastUpdate.toLocaleString());
+	if (lastUpdate.getTime() > 0) {
+		$('#lastUpdatedValue').html(lastUpdate.toLocaleString());
+	} else {
+		$('#lastUpdatedValue').html('Never');
+	}
 }
 
 function getLastValue(array, index, undefVal) {
@@ -533,28 +717,42 @@ function getLastValue(array, index, undefVal) {
 }
 
 function updateHashrateMetrics() {
-	var length = CURRENT_DATA.hashRate.length;
+	var min = 0;
+	var max = 0;
+	var sum = 0;
+	var average = 0;
 	
-	if (length > 0) {
-		var min = CURRENT_DATA.hashRate[0][1];
-		var max = CURRENT_DATA.hashRate[0][1];
-		var sum = CURRENT_DATA.hashRate[0][1];
+	var histLength = HISTORICAL_DATA.hashRate.length;
+	var curLength = CURRENT_DATA.hashRate.length;
+	
+	if (histLength > 0) {
+		min = HISTORICAL_DATA.hashRate[0][1];
+		max = HISTORICAL_DATA.hashRate[0][1];
 		
-		if (length > 1) {
-			for (var i = 1; i < length; i++) {
-				var val = CURRENT_DATA.hashRate[i][1];
-				min = Math.min(min, val);
-				max = Math.max(max, val);
-				sum += val;
-			}
+		for (var i = 0; i < histLength; i++) {
+			var val = HISTORICAL_DATA.hashRate[i][1];
+			min = Math.min(min, val);
+			max = Math.max(max, val);
+			sum += val;
 		}
-		
-		var average = sum / length;
-		
-		$('#averageHashRateValue').html(sprintf(hashrateFormatString, average));
-		$('#minimumHashRateValue').html(sprintf(hashrateFormatString, min));
-		$('#maximumHashRateValue').html(sprintf(hashrateFormatString, max));
 	}
+	
+	for (var i = 0; i < curLength; i++) {
+		var val = CURRENT_DATA.hashRate[i][1];
+		min = Math.min(min, val);
+		max = Math.max(max, val);
+		sum += val;
+	}
+	
+	var totalLength = histLength + curLength;
+	
+	if (totalLength > 0) {
+		average = sum / totalLength;
+	}
+	
+	$('#averageHashRateValue').html(sprintf(hashrateFormatString, average));
+	$('#minimumHashRateValue').html(sprintf(hashrateFormatString, min));
+	$('#maximumHashRateValue').html(sprintf(hashrateFormatString, max));
 }
 
 function showError(error) {
@@ -565,6 +763,22 @@ function showError(error) {
 function hideError() {
 	if ($('#error').is(":visible")) {
 		$('#error').slideUp("slow");
+	}
+}
+
+function openIdleDialog() {
+	if (!$("#idleMessage").dialog("isOpen")) {
+		$("#idleMessage").dialog("open");
+	}
+}
+
+function isIdleDialogOpen() {
+	return $("#idleMessage").dialog("isOpen");
+}
+
+function closeIdleDialog() {
+	if (isIdleDialogOpen()) {
+		$("#idleMessage").dialog("close");
 	}
 }
 
@@ -584,16 +798,8 @@ function hideBalancesLoading() {
 	$('#balancesHistoryLoading').hide();
 }
 
-
 function startInterval() {
 	if (intervalId == 0) {
-		
-		// Prevent rapid pinging of stop->start to force updates
-		var milliSinceLastUpdate = new Date().getTime() - lastUpdate.getTime();
-		if (milliSinceLastUpdate > 10000) {
-			doUpdate();
-		}
-		
 		intervalId = self.setInterval(function() {
 			doUpdate();
 		}, updateInterval);
@@ -603,26 +809,6 @@ function startInterval() {
 		console.log("Interval already started!");
 	}
 };
-
-function stopInterval() {
-	if (intervalId != 0) {
-		clearInterval(intervalId);
-		intervalId = 0;
-		$('#status').html('paused');
-	}
-};
-
-function resetInterval(interval) {
-	if (intervalId != 0) {
-		clearInterval(intervalId);
-	}
-	
-	updateInterval = interval;
-	
-	intervalId = self.setInterval(function() {
-		doUpdate();
-	}, interval);
-}
 
 $.extend({
 	getUrlVars : function() {

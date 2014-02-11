@@ -83,14 +83,19 @@ a:hover {
 	font-size: 11px;
 }
 
-#controls .ui-button.ui-widget {
+#controls .ui-button {
     height: 15px;
-}
-
-#controls .ui-button.ui-widget .ui-button-text{
     font-size: 10px;
     line-height: 6px;
     text-transform: lowercase;
+}
+
+.ui-widget-overlay {
+	background-image: none !important; /* FF fix */
+	background: #000;
+	opacity: .7;
+	-moz-opacity: 0.7;
+	filter: alpha(opacity=70);
 }
 
 #toolbar .key {
@@ -126,6 +131,10 @@ a:hover {
 	align: right;
 	text-align: right;
 	padding-right: 8%;
+}
+
+.timeScale div {
+	display: inline;
 }
 
 .timeScale span {

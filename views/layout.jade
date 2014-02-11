@@ -2,11 +2,14 @@ doctype html
 html
 	head
 		title= title
+		link(rel='stylesheet', href='/stylesheets/jquery.jqplot.css')
+		link(rel='stylesheet', href='//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css')
 		link(rel='stylesheet', href='/stylesheets/style.css')
+	body
+		block content
 		script(type='text/javascript' src='https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js')
 		| <!--[if lt IE 9]><script language="javascript" type="text/javascript" src="/javascripts/jqplot/excanvas.js"></script><![endif]-->
 		| <script language="javascript" type="text/javascript" src="/javascripts/jqplot/jquery.jqplot.min.js"></script>
-		| <link rel="stylesheet" type="text/css" href="/stylesheets/jquery.jqplot.css" />
 		| <script type="text/javascript" src="/javascripts/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
 		| <script type="text/javascript" src="/javascripts/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
 		| <script type="text/javascript" src="/javascripts/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
@@ -15,8 +18,5 @@ html
 		| <script type="text/javascript" src="/javascripts/jqplot/plugins/jqplot.cursor.min.js"></script>
 		| <script type="text/javascript" src="/javascripts/jqplot/plugins/jqplot.meterGaugeRenderer.min.js"></script>
 		| <script type="text/javascript" src="/javascripts/sprintf.min.js"></script>
-		| <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/themes/smoothness/jquery-ui.css" />
 		| <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
-	body
-		block content
 		script(type='text/javascript' src='/javascripts/app.js')
