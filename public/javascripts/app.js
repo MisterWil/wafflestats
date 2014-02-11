@@ -78,7 +78,7 @@ var address = null;
 var intervalId = 0;
 var updateInterval = 1000 * 1; // Set to 5 seconds until history is loaded
 var apiInterval = 1000 * 60;
-var idleTimeout = 1000 * 5;
+var idleTimeout = 1000 * 60;
 
 // Format Strings
 var hashrateFormatString = "%.2f kH/s";
@@ -200,10 +200,14 @@ $.ajaxSetup({
 $(document).ready(function() {
 
 	// Grab Bitcoin address
-	address = $.getUrlVar('address').trim().replace('#','');
+	address = $.getUrlVar('address');
 	
-	if (address === undefined || !btcAddressRegex.test(address)) {
-		console.log(sprintf('BTC Address \'%s\' failed regex check.', address));
+	if (address !== undefined) {
+		address = address.trim().replace('#','');
+		
+		if (!btcAddressRegex.test(address)) {
+			console.log(sprintf('BTC Address \'%s\' failed regex check.', address));
+		}
 	}
 	
 	// Setup focus handler
@@ -356,11 +360,13 @@ function loadHistoricalData() {
 	APP.loaded = true;
 }
 
-function unloadHistoricalData() {
+function unloadData() {
 	console.log('UNLOADING DATA');
 	
 	clearHistoricalHashRate();
 	clearHistoricalBalances();
+	
+	clearCurrentData();
 	
 	APP.loaded = false;
 }
@@ -478,18 +484,25 @@ function processHistoricalBalances(history) {
 
 function clearHistoricalHashRate() {
 	DATA_RANGE.HASHRATE.firstValue = new Date();
-	DATA_RANGE.HASHRATE.lastValue = new Date();
+	//DATA_RANGE.HASHRATE.lastValue = new Date();
 	
 	HISTORICAL_DATA.hashRate = [];
 }
 
 function clearHistoricalBalances() {
 	DATA_RANGE.BALANCES.firstValue = new Date();
-	DATA_RANGE.BALANCES.lastValue = new Date();
+	//DATA_RANGE.BALANCES.lastValue = new Date();
 	
 	HISTORICAL_DATA.sent = [];
 	HISTORICAL_DATA.confirmed = [];
 	HISTORICAL_DATA.unconverted = [];
+}
+
+function clearCurrentData() {
+	CURRENT_DATA.hashRate = [];
+	CURRENT_DATA.sent = [];
+	CURRENT_DATA.confirmed = [];
+	CURRENT_DATA.unconverted = [];
 }
 
 function doUpdate() {
@@ -504,7 +517,7 @@ function doUpdate() {
 	checkIdle();
 	
 	if (APP.idle && APP.loaded) {
-		unloadHistoricalData();
+		unloadData();
 		openIdleDialog();
 		updateGUI();
 	} else if (!APP.idle && !APP.loaded) {
