@@ -1,0 +1,53 @@
+doctype html
+html(lang='en')
+head
+    meta(charset='utf-8')
+    meta(name='viewport', content='width=device-width, initial-scale=1.0')
+    title=title
+    link(href="//netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap.min.css", rel="stylesheet")
+    link(href="//netdna.bootstrapcdn.com/bootswatch/3.1.0/lumen/bootstrap.min.css", rel="stylesheet")
+    link(href="/stylesheets/bootstrap.css", rel="stylesheet")
+  body(data-spy="scroll", data-target=".navbar-nav")
+    .navbar.navbar-default.navbar-fixed-top
+      .container-fluid
+        .navbar-header
+          button.navbar-toggle(type='button', data-toggle='collapse', data-target='.navbar-collapse')
+            span.icon-bar
+            span.icon-bar
+            span.icon-bar
+          a.navbar-brand(href='#') #{title}
+        .navbar-collapse.collapse
+          ul.nav.navbar-nav.navbar-right
+            li.dropdown
+              a.dropdown-toggle(href="#", data-toggle='dropdown')
+                | Last Update: Never&nbsp;
+                b.caret
+              ul.dropdown-menu
+                li
+                  | Something
+         .nav-collapse
+         
+    .container-fluid
+      .row
+        .col-md-4
+          h3 Current Hashrate
+          #hashRateMeter
+        .col-md-8
+          h3 Historical Hashrate
+          #historalHashRateGraph
+      .row
+        .col-md-4
+          h3 Current Balance
+        .col-md-8
+          h3 Historical Balance
+      .row
+        .col-md-4
+          #hashRateMeter
+        .col-md-8
+          #historicalBalances.graph
+    script(src='//code.jquery.com/jquery-1.10.2.min.js')
+    script(src='//netdna.bootstrapcdn.com/bootstrap/3.1.0/js/bootstrap.min.js')
+    script(src='//code.highcharts.com/highcharts.js')
+    script(src='//code.highcharts.com/highcharts-more.js')
+    script(src='//code.highcharts.com/modules/exporting.js')
+    script(src='/javascripts/test.js')
