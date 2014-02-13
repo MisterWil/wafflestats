@@ -491,7 +491,7 @@ function checkIdle() {
  * 
  * 1a) Historical data with a start and end date so current data remains current or clear our current every time history changes?
  * 
- * 2) Get show working
+ * 2) Get show working!
  * 
  * 3) Finish re-implementing fat-free mode
  */
