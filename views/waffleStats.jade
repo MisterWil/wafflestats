@@ -35,8 +35,9 @@ block header
   .nav.navbar-nav.navbar-right
       ul.nav.navbar-nav
         li
-          a(href="#") Last Updated:&nbsp;
-            label#updated Never
+          a(href="#")
+            label Last Updated:&nbsp;
+            span#updated Never
 
 block content
   .container-fluid
@@ -45,22 +46,23 @@ block content
         h3 Current Hashrate
         h2.well
           span#hashrate 0.00
-          div
-            abbr.small(title="kilohashes per second") kH/s
+        div#khs.text-right
+          h4.text-muted
+            abbr(title="kilohashes per second") kH/s
         br
-        table.table.table-striped.table-hover.pull-right
+        table.table.table-hover.pull-right
+          tr.text-muted.active
+            th Minimum
           tr.text-muted
-            th Minimum:
+            td.nowrap.text-left#minimumHR 0 kH/s
+          tr.text-muted.active
+            th Average
           tr.text-muted
-            td.nowrap#minimumHR 0 kH/s
+            td.nowrap.text-left#averageHR 0 kH/s
+          tr.text-muted.active
+            th Maximum
           tr.text-muted
-            th Average:
-          tr.text-muted
-            td.nowrap#averageHR 0 kH/s
-          tr.text-muted
-            th Maximum:
-          tr.text-muted
-            td.nowrap#maximumHR 0 kH/s
+            td.nowrap.text-left#maximumHR 0 kH/s
       .col-md-10.text-center.fixed-fluid
         h3 Historical Hashrate
         .timeScale.text-right
@@ -68,32 +70,32 @@ block content
         #historalHashrate.graph
     .row
       .col-md-2.text-center.nowrap
-        h3 Current Balance
+        h3 Current Balances
         table.table.table-hover
           tr.info
             th Confirmed
-          tr.info
-            td.nowrap
+          tr
+            td.nowrap.text-left
               i.fa.fa-btc &nbsp;
               span#confirmed 0.00000000
           tr.warning
             th Unconverted
-          tr.warning
-            td.nowrap
+          tr
+            td.nowrap.text-left
               i.fa.fa-btc &nbsp;
               span#unconverted 0.00000000
+          tr.active
+            th Unsent
           tr
-            th Unsent:
-          tr
-            td.nowrap
+            td.nowrap.text-left
               i.fa.fa-btc &nbsp;
               span#unsent 0.00000000
           tr
             td
           tr.success
             th Sent
-          tr.success
-            td.nowrap
+          tr
+            td.nowrap.text-left
               i.fa.fa-btc &nbsp;
               span#sent 0.00000000
       .col-md-10.text-center.fixed-fluid

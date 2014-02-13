@@ -59,9 +59,22 @@ var TIME_SCALES = {
 	}
 };
 
+var SCALE_MILLIS = {
+	val_1min: 1000*60,
+	val_5min: 1000*60*5,
+	val_1hr: 1000*60*60,
+	val_6hr: 1000*60*60*6,
+	val_12hr: 1000*60*60*12,
+	val_24hr: 1000*60*60*24,
+	val_1day: 1000*60*60*24,
+	val_1wk: 1000*60*60*24*7,
+	val_2wk: 1000*60*60*24*7*2,
+	val_1mo: 1000*60*60*24*7*4,
+};
+
 var HISTORY_INTERVALS = {
-	hashRate: getTimeScaleMillis(TIME_SCALES.HASHRATE.resolution),
-	balances: getTimeScaleMillis(TIME_SCALES.BALANCES.resolution)
+	hashRate: SCALE_MILLIS['val_'+TIME_SCALES.HASHRATE.resolution],
+	balances: SCALE_MILLIS['val_'+TIME_SCALES.BALANCES.resolution]
 };
 
 // Last API and History Update
@@ -228,6 +241,12 @@ $( window ).resize(function() {
 function setDefaults() {
 	$.pnotify.defaults.history = false;
 	$.pnotify.defaults.styling = "bootstrap3";
+	
+	Highcharts.setOptions({
+        global : {
+            useUTC : false
+        }
+    });
 }
 
 function initControls() {
@@ -314,7 +333,7 @@ function updateHashRateHistory() {
 	TIME_SCALES.HASHRATE.range = setTimeScaleRange(TIME_SCALES.HASHRATE.range,
 			TIME_SCALES.HASHRATE.resolution, 'hashrate');
 	
-	HISTORY_INTERVALS.hashRate = getTimeScaleMillis(TIME_SCALES.HASHRATE.resolution);
+	HISTORY_INTERVALS.hashRate = SCALE_MILLIS['val_'+TIME_SCALES.HASHRATE.resolution];
 	
 	if (LOADING.hashRate === STATES.READY) {
 		LOADING.hashRate = STATES.LOADING;
@@ -341,7 +360,7 @@ function updateBalancesHistory() {
 	TIME_SCALES.BALANCES.range = setTimeScaleRange(TIME_SCALES.BALANCES.range,
 			TIME_SCALES.BALANCES.resolution, 'balances');
 	
-	HISTORY_INTERVALS.balances = getTimeScaleMillis(TIME_SCALES.BALANCES.resolution);
+	HISTORY_INTERVALS.balances = SCALE_MILLIS['val_'+TIME_SCALES.BALANCES.resolution];
 	
 	if (LOADING.balances === STATES.READY) {
 		LOADING.balances = STATES.LOADING;
@@ -498,8 +517,6 @@ function updateAPI() {
 
 function updateGUI() {
 	checkLoaded();
-	replotGraphs();
-	redrawGraphs();
 	updateValues();
 }
 
@@ -549,23 +566,33 @@ function formatAPIValues(data) {
 function checkLoaded() {
 	if (LOADING.hashRate === STATES.LOADED) {
 		LOADING.hashRate = STATES.READY;
+		
+		replotHistoricalGraph();
+		
 		hideHashRateLoading();
 		enableTimeScaleButtons('hashrate');
 	}
 	
 	if (LOADING.balances === STATES.LOADED) {
 		LOADING.balances = STATES.READY;
+		
+		replotBalanceGraph();
+		
 		hideBalancesLoading();
 		enableTimeScaleButtons('balances');
 	}
 }
 
-function replotGraphs() {
+function replotHistoricalGraph() {
 	GRAPHS.historicalHashrate.series[0].setData(HISTORICAL_DATA.hashRate, false);
+	GRAPHS.historicalHashrate.redraw();
+}
 
+function replotBalanceGraph() {
 	GRAPHS.historicalBalances.series[0].setData(HISTORICAL_DATA.confirmed, false);
 	GRAPHS.historicalBalances.series[1].setData(HISTORICAL_DATA.unconverted, false);
 	GRAPHS.historicalBalances.series[2].setData(HISTORICAL_DATA.sent, false);
+	GRAPHS.historicalBalances.redraw();
 }
 
 function reflowGraphs() {
@@ -573,10 +600,6 @@ function reflowGraphs() {
 	GRAPHS.historicalBalances.reflow();
 }
 
-function redrawGraphs() {
-	GRAPHS.historicalHashrate.redraw();
-	GRAPHS.historicalBalances.redraw();
-}
 
 /**
  * @returns An array containing the tickInterval and the formatString
@@ -733,31 +756,6 @@ function startInterval() {
 		console.log("Interval already started!");
 	}
 };
-
-function getTimeScaleMillis(str) {
-	switch (str) {
-	case '1min':
-		return 1000*60;
-	case '5min':
-		return 1000*60*5;
-	case '1hr':
-		return 1000*60*60;
-	case '1day':
-		return 1000*60*60*24;
-	case '6hr':
-		return 1000*60*60*6;
-	case '12hr':
-		return 1000*60*60*12;
-	case '24hr':
-		return 1000*60*60*24;
-	case '1wk':
-		return 1000*60*60*24*7;
-	case '2wk':
-		return 1000*60*60*24*7*2;
-	case '1mo':
-		return 1000*60*60*24*7*4;
-	}
-}
 
 $.extend({
 	getUrlVars : function() {

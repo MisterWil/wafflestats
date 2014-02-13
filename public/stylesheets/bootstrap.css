@@ -14,6 +14,11 @@ body {
 	height: 400px;
 }
 
+#khs {
+	position: relative;
+	top: -15px;
+}
+
 #wrapper {
   min-height: 100%;
   height: auto;
