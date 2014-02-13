@@ -65,7 +65,7 @@ block content
             td.nowrap.text-left#maximumHR 0 kH/s
       .col-md-10.text-center.fixed-fluid
         h3 Historical Hashrate
-        .timeScale.text-right
+        .timeScale.hidden-xs.text-right
           +timeScale("hashrate")
         #historalHashrate.graph
     .row
@@ -98,13 +98,20 @@ block content
             td.nowrap.text-left
               i.fa.fa-btc &nbsp;
               span#sent 0.00000000
-      .col-md-10.text-center.fixed-fluid
-        h3 Historical Balance
-        .pull-left.hidden-xs.hidden-s
-          +visibility("balances", ['confirmed', 'unconverted', 'sent'])
-        .timeScale.pull-right.text-right
-          +timeScale("balances")
-        #historicalBalances.graph
+      .col-md-10.text-center
+        .container-fluid
+          .row
+            .col-sm-12
+              h3 Historical Balance
+          .row
+            .col-sm-12
+              .hidden-xs.hidden-sm.text-left.pull-left
+                +visibility("balances", ['confirmed', 'unconverted', 'sent'])
+              .hidden-xs.text-right.pull-right
+                +timeScale("balances")
+          .row
+            .col-sm-12
+              #historicalBalances.graph
       
 block scripts
   script(src='/javascripts/wafflestats.js')
