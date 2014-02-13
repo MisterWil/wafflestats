@@ -1,0 +1,101 @@
+extends bootstrap
+
+mixin timeScale(name)
+  .btn-group(id="resolution_#{name}")
+    button.btn.btn-default.btn-xs.header(disabled="disabled") resolution by
+    button.btn.btn-primary.btn-xs(id="resolution_#{name}_1min", value="1min") 1 min
+    button.btn.btn-primary.btn-xs(id="resolution_#{name}_5min", value="5min") 5 min
+    button.btn.btn-primary.btn-xs(id="resolution_#{name}_1hr", value="1hr") 1 hr
+    button.btn.btn-primary.btn-xs(id="resolution_#{name}_1day", value="1day") 1 day
+  .btn-group(id="range_#{name}")
+    button.btn.btn-default.btn-xs.header(disabled="disabled") range
+    button.btn.btn-primary.btn-xs.smallRange(id="range_#{name}_1hr", value="1hr") 1 hr
+    button.btn.btn-primary.btn-xs.smallRange(id="range_#{name}_6hr", value="6hr") 6 hr
+    button.btn.btn-primary.btn-xs.smallRange(id="range_#{name}_12hr", value="12hr") 12 hr
+    button.btn.btn-primary.btn-xs.smallRange(id="range_#{name}_24hr", value="24hr") 24 hr
+    button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_1day", value="1day") 1 day
+    button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_1wk", value="1wk") 1 wk
+    button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_2wk", value="2wk") 2 wk
+    button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_1mo", value="1mo") 1 mo
+      
+block header
+  form.navbar-form.navbar-left.hidden-xs.hidden-s(role="btcAddr")
+      .form-group
+        input.form-control(type="text", placeholder="Bitcoin Address", size="33")
+      button.btn.btn-default(type="submit")
+        i.fa.fa-refresh.fa-lg
+  .nav.navbar-nav.navbar-right
+    form.navbar-form.navbar-right(role="fatFreeMode")
+      a.btn.btn-default Fat-Free Mode
+    ul.nav.navbar-nav
+      li
+        a(href="#") Updated:&nbsp;
+          span#updated Never
+
+block content
+  .row
+    .col-md-2.text-center.nowrap
+      h3 Current Hashrate
+      h1.well
+        span#hashrate 0.00
+        abbr.small(title="kilohashes per second") &nbsp; kH/s
+      br
+      table.table.table-striped.table-hover
+        tr.text-muted
+          th Minimum:
+          td.nowrap#minimumHR 1500 kH/s
+        tr.text-muted
+          th Average:
+          td.nowrap#averageHR 1500 kH/s
+        tr.text-muted
+          th Maximum:
+          td.nowrap#maximumHR 1500 kH/s
+    .col-md-10.text-center
+      h3 Historical Hashrate
+      .timeScale.text-right
+        +timeScale("hashrate")
+      #historalHashrate.graph
+  .row
+    .col-md-2.text-center.nowrap
+      h3 Current Balance
+      table.table.table-striped.table-hover
+        tr
+          th Confirmed:
+          td.nowrap
+            i.fa.fa-btc
+            span#confirmed 0.00000000
+        tr
+          th Unconverted:
+          td.nowrap
+            i.fa.fa-btc
+            span#unconverted 0.00000000
+        tr.info
+          th Unsent:
+          td.nowrap
+            i.fa.fa-btc
+            span#unsent 0.00000000
+        tr
+          th
+          td
+        tr.success
+          th Sent:
+          td.nowrap
+            i.fa.fa-btc
+            span#sent 0.00000000
+    .col-md-10.text-center
+      h3 Historical Balance
+      .pull-left.hidden-xs.hidden-s
+        .btn-group(data-toggle="buttons")
+          label.btn.btn-default.btn-xs(disabled="disabled") show
+          label.btn.btn-primary.btn-xs confirmed
+            input(type="checkbox" id="show_confirmed" name="show_confirmed")
+          label.btn.btn-primary.btn-xs unconverted
+            input(type="checkbox" id="show_confirmed" name="show_unconverted")
+          label.btn.btn-primary.btn-xs sent
+            input(type="checkbox" id="show_sent" name="show_sent")
+      .timeScale.pull-right.text-right
+        +timeScale("balances")
+      #historicalBalances.graph
+      
+block scripts
+  script(src='/javascripts/waffles.js')

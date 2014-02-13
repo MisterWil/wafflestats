@@ -62,10 +62,11 @@ module.exports = function(app, rclient) {
 	}
 	
 	function onSuccess(req, res, result) {
-		// Inject custom version info & cacheID
+		// Inject custom version info, cacheID, and createdAt time
 		var inject = {
 			wafflesVersion : app.get('wafflesVersion'),
-			cacheID : guid()
+			cacheID : guid(),
+			createdAt : new Date()
 		};
 		result = extend(inject, result);
 		

@@ -5,7 +5,8 @@ head
     meta(name='viewport', content='width=device-width, initial-scale=1.0')
     title=title
     link(href="//netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap.min.css", rel="stylesheet")
-    link(href="//netdna.bootstrapcdn.com/bootswatch/3.1.0/lumen/bootstrap.min.css", rel="stylesheet")
+    link(href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css", rel="stylesheet")
+    link(href="/stylesheets/jquery.pnotify.default.css", rel="stylesheet")
     link(href="/stylesheets/bootstrap.css", rel="stylesheet")
   body(data-spy="scroll", data-target=".navbar-nav")
     .navbar.navbar-default.navbar-fixed-top
@@ -15,39 +16,29 @@ head
             span.icon-bar
             span.icon-bar
             span.icon-bar
-          a.navbar-brand(href='#') #{title}
-        .navbar-collapse.collapse
-          ul.nav.navbar-nav.navbar-right
-            li.dropdown
-              a.dropdown-toggle(href="#", data-toggle='dropdown')
-                | Last Update: Never&nbsp;
-                b.caret
-              ul.dropdown-menu
-                li
-                  | Something
-         .nav-collapse
-         
-    .container-fluid
-      .row
-        .col-md-4
-          h3 Current Hashrate
-          #hashRateMeter
-        .col-md-8
-          h3 Historical Hashrate
-          #historalHashRateGraph
-      .row
-        .col-md-4
-          h3 Current Balance
-        .col-md-8
-          h3 Historical Balance
-      .row
-        .col-md-4
-          #hashRateMeter
-        .col-md-8
-          #historicalBalances.graph
+          a.navbar-brand(href='#') WAFFLEStats
+        .navbar-collapse.nav-collapse
+          block header
+    #wrapper
+      .container-fluid
+        block content
+
+    #footer
+      .container-fluid
+        p.text-muted.text-center Donate BTC or Mining Time @ 1Pr87ypYdG8eMTNUXR4rT1q2P1VJ7yu1b5
+        p.text-muted.text-center
+          span Created by Wil Schrader
+          span MisterWil on Reddit
+          span Wil on irc.freenode.net/##wafflepool
+          span.reverse moc.liamg@
+            span.obv ilikebutts
+            | redarliw
     script(src='//code.jquery.com/jquery-1.10.2.min.js')
     script(src='//netdna.bootstrapcdn.com/bootstrap/3.1.0/js/bootstrap.min.js')
     script(src='//code.highcharts.com/highcharts.js')
     script(src='//code.highcharts.com/highcharts-more.js')
     script(src='//code.highcharts.com/modules/exporting.js')
-    script(src='/javascripts/test.js')
+    script(src='/javascripts/sprintf.min.js')
+    script(src='/javascripts/purl.js')
+    script(src='/javascripts/jquery.pnotify.min.js')
+    block scripts

@@ -56,7 +56,7 @@ app.configure('production', function() {
 // Setup routes
 app.get('/', routes.index);
 app.get('/bootstrap', function (req, res){
-	res.render('bootstrap', { title: 'WAFFLEStats' });
+	res.render('waffleStats', { title: 'WAFFLEStats' });
 });
 app.get('/current/:address', current.temp_api);
 app.get('/historical/hashRate/:address/:resolution/:range', historical.granularHashRate);
