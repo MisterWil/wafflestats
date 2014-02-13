@@ -676,8 +676,8 @@ function updateHashrateMetrics() {
 		average = sum / histLength;
 	}
 	
-	setValue("#minimumHR", sprintf(hashrateFormatString, average));
-	setValue("#averageHR", sprintf(hashrateFormatString, min));
+	setValue("#minimumHR", sprintf(hashrateFormatString, min));
+	setValue("#averageHR", sprintf(hashrateFormatString, average));
 	setValue("#maximumHR", sprintf(hashrateFormatString, max));
 }
 
