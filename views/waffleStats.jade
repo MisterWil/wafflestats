@@ -41,56 +41,62 @@ block header
 block content
   .container-fluid
     .row
-      .col-lg-2.col-md-4.text-center.nowrap
+      .col-md-2.text-center.nowrap
         h3 Current Hashrate
-        h1.well
+        h2.well
           span#hashrate 0.00
-          span &nbsp;
-          abbr.small(title="kilohashes per second") kH/s
+          div
+            abbr.small(title="kilohashes per second") kH/s
         br
         table.table.table-striped.table-hover.pull-right
           tr.text-muted
             th Minimum:
+          tr.text-muted
             td.nowrap#minimumHR 0 kH/s
           tr.text-muted
             th Average:
+          tr.text-muted
             td.nowrap#averageHR 0 kH/s
           tr.text-muted
             th Maximum:
+          tr.text-muted
             td.nowrap#maximumHR 0 kH/s
-      .col-lg-10.col-md-8.text-center.fixed-fluid
+      .col-md-10.text-center.fixed-fluid
         h3 Historical Hashrate
         .timeScale.text-right
           +timeScale("hashrate")
         #historalHashrate.graph
     .row
-      .col-lg-2.col-md-4.text-center.nowrap
+      .col-md-2.text-center.nowrap
         h3 Current Balance
         table.table.table-hover
           tr.info
-            th Confirmed:
+            th Confirmed
+          tr.info
             td.nowrap
               i.fa.fa-btc &nbsp;
               span#confirmed 0.00000000
           tr.warning
-            th Unconverted:
+            th Unconverted
+          tr.warning
             td.nowrap
               i.fa.fa-btc &nbsp;
               span#unconverted 0.00000000
           tr
             th Unsent:
+          tr
             td.nowrap
               i.fa.fa-btc &nbsp;
               span#unsent 0.00000000
           tr
-            th
             td
           tr.success
-            th Sent:
+            th Sent
+          tr.success
             td.nowrap
               i.fa.fa-btc &nbsp;
               span#sent 0.00000000
-      .col-lg-10.col-md-8.text-center.fixed-fluid
+      .col-md-10.text-center.fixed-fluid
         h3 Historical Balance
         .pull-left.hidden-xs.hidden-s
           +visibility("balances", ['confirmed', 'unconverted', 'sent'])
