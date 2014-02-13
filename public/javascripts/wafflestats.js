@@ -488,8 +488,6 @@ function updateAPI() {
 			performVersionCheck(data);
 
 			updateCurrentData(data);
-
-			updateValues();
 		} else {
 			showError('Remote Error', data.error);
 		}
@@ -502,6 +500,7 @@ function updateGUI() {
 	checkLoaded();
 	replotGraphs();
 	redrawGraphs();
+	updateValues();
 }
 
 function performVersionCheck(data) {
