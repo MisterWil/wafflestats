@@ -43,32 +43,6 @@ block content
   .container-fluid
     .row
       .col-md-2.text-center.nowrap
-        h3 Current Hashrate
-        h2.well
-          span#hashrate 0.00
-        div#khs.text-right
-          h4.text-muted
-            abbr(title="kilohashes per second") kH/s
-        table.table.table-hover.pull-right
-          tr.text-muted.active
-            th Minimum
-          tr.text-muted
-            td.nowrap.text-left#minimumHR 0 kH/s
-          tr.text-muted.active
-            th Average
-          tr.text-muted
-            td.nowrap.text-left#averageHR 0 kH/s
-          tr.text-muted.active
-            th Maximum
-          tr.text-muted
-            td.nowrap.text-left#maximumHR 0 kH/s
-      .col-md-10.text-center.fixed-fluid
-        h3 Historical Hashrate
-        .timeScale.hidden-xs.text-right
-          +timeScale("hashrate")
-        #historalHashrate.graph
-    .row
-      .col-md-2.text-center.nowrap
         h3 Current Balances
         table.table.table-hover
           tr.info
@@ -111,6 +85,32 @@ block content
           .row
             .col-sm-12
               #historicalBalances.graph
-      
+    .row
+      .col-md-2.text-center.nowrap
+        h3 Current Hashrate
+        h2.well
+          span#hashrate 0.00
+        div#khs.text-right
+          h4.text-muted
+            abbr(title="kilohashes per second") kH/s
+        table.table.table-hover.pull-right
+          tr.text-muted.active
+            th Minimum
+          tr.text-muted
+            td.nowrap.text-left#minimumHR 0 kH/s
+          tr.text-muted.active
+            th Average
+          tr.text-muted
+            td.nowrap.text-left#averageHR 0 kH/s
+          tr.text-muted.active
+            th Maximum
+          tr.text-muted
+            td.nowrap.text-left#maximumHR 0 kH/s
+      .col-md-10.text-center.fixed-fluid
+        h3 Historical Hashrate
+        .timeScale.hidden-xs.text-right
+          +timeScale("hashrate")
+        #historalHashrate.graph
+        
 block scripts
   script(src='/javascripts/wafflestats.js')
