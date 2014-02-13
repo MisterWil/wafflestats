@@ -1,13 +1,17 @@
 extends bootstrap
 
 block content
-  .container
-    h1 Welcome to WAFFLEStats
-    p Live and historical statistics pulled from wafflepool for monitoring your hashrate and balances!
-    p To get started, just enter the bitcoin address used on wafflepool and hit go.
-    br
-    form(role="form", name="stats", action="/bootstrap", method="get")
-      .form-inline
-        label.sr-only(for="address") Bitcoin Address
-        input.form-control(type="text", placeholder="Bitcoin Address", id="address", name="address", size="35")
-        button.btn.btn-success(type="submit" value="Go") Go
+  .container-fluid
+    .container
+      h1 Welcome to WAFFLEStats
+      p Live and historical statistics pulled from wafflepool for monitoring your hashrate and balances!
+      p To get started, just enter the bitcoin address used on wafflepool and hit go.
+      br
+      form(role="address", name="stats", action="/stats", method="get")
+        .form-inline
+          label.sr-only(for="address") Bitcoin Address
+          input.form-control(type="text", placeholder="Bitcoin Address", id="address", name="address", size="42")
+          button.btn.btn-success(type="submit" value="Go") Go
+        
+block scripts
+  script(src='/javascripts/index.js')

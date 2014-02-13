@@ -1,8 +1,13 @@
-
-/*
- * GET home page.
- */
-
-exports.index = function(req, res){
-  res.render('index', { title: 'WAFFLEStats' });
+module.exports = function() {
+	var routes = {};
+	
+	routes.index = function(req, res){
+		  res.render('index', { title: 'WAFFLEStats' });
+	};
+	
+	routes.stats = function(req, res){
+		  res.render('waffleStats', { title: 'WAFFLEStats' });
+	};
+	
+	return routes;
 };

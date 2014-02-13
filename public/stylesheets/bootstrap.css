@@ -20,7 +20,7 @@ body {
   /* Negative indent footer by its height */
   margin: 0 auto -60px;
   /* Pad bottom by footer height */
-  padding: 0 0 60px;
+  padding: 0 0 100px;
 }
 
 #footer {
@@ -31,8 +31,7 @@ body {
 }
 
 #footer span {
-  margin-right: 20px;
-  margin-left: 20px;
+  margin-left: 10px;
 }
 
 #footer .reverse {

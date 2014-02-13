@@ -5,7 +5,7 @@
 
 var express = require('express');
 var mongoose = require('mongoose');
-var routes = require('./routes');
+var routes = require('./routes')();
 var http = require('http');
 var path = require('path');
 
@@ -22,7 +22,7 @@ var historical = require('./routes/historical')(app, rclient);
 
 app.configure(function() {
 	// Waffles Version Info
-	app.set('wafflesVersion', '0.51');
+	app.set('wafflesVersion', '0.6');
 
 	// all environments
 	app.set('port', process.env.PORT || 3000);
@@ -55,9 +55,8 @@ app.configure('production', function() {
 
 // Setup routes
 app.get('/', routes.index);
-app.get('/bootstrap', function (req, res){
-	res.render('waffleStats', { title: 'WAFFLEStats' });
-});
+app.get('/stats', routes.stats);
+
 app.get('/current/:address', current.temp_api);
 app.get('/historical/hashRate/:address/:resolution/:range', historical.granularHashRate);
 app.get('/historical/balances/:address/:resolution/:range', historical.granularBalances);

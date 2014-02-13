@@ -17,28 +17,29 @@ head
             span.icon-bar
             span.icon-bar
           a.navbar-brand(href='#') WAFFLEStats
-        .navbar-collapse.nav-collapse
+        .navbar-collapse.nav-collapse.collapse
           block header
+          
     #wrapper
-      .container-fluid
-        block content
+      block content
 
     #footer
       .container-fluid
-        p.text-muted.text-center Donate BTC or Mining Time @ 1Pr87ypYdG8eMTNUXR4rT1q2P1VJ7yu1b5
-        p.text-muted.text-center
+        .text-muted.text-center Donate BTC or Mining Time @ 1Pr87ypYdG8eMTNUXR4rT1q2P1VJ7yu1b5
+        .text-muted.text-center
           span Created by Wil Schrader
-          span MisterWil on Reddit
-          span Wil on irc.freenode.net/##wafflepool
           span.reverse moc.liamg@
             span.obv ilikebutts
             | redarliw
+        .text-muted.text-center
+          span MisterWil on Reddit
+          span Wil on irc.freenode.net/##wafflepool
     script(src='//code.jquery.com/jquery-1.10.2.min.js')
     script(src='//netdna.bootstrapcdn.com/bootstrap/3.1.0/js/bootstrap.min.js')
     script(src='//code.highcharts.com/highcharts.js')
     script(src='//code.highcharts.com/highcharts-more.js')
     script(src='//code.highcharts.com/modules/exporting.js')
-    script(src='/javascripts/sprintf.min.js')
-    script(src='/javascripts/purl.js')
-    script(src='/javascripts/jquery.pnotify.min.js')
+    script(src='/javascripts/plugins/sprintf.min.js')
+    script(src='/javascripts/plugins/purl.js')
+    script(src='/javascripts/plugins/jquery.pnotify.min.js')
     block scripts

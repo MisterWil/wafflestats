@@ -18,10 +18,10 @@ var HISTORICAL_DATA = {
 };
 
 var CURRENT_DATA = {
-		hashRate : [],
-		sent : [],
-		confirmed : [],
-		unconverted : []
+		hashRate : 0.0,
+		sent : 0.0,
+		confirmed : 0.0,
+		unconverted : 0.0
 };
 
 var DATA_RANGE = {
@@ -42,7 +42,7 @@ var GRAPHS = {
 
 var SHOWING = {
 		BALANCES : {
-			converted: true,
+			confirmed: true,
 			unconverted: true,
 			sent: false
 		}
@@ -59,15 +59,15 @@ var TIME_SCALES = {
 	}
 };
 
-var APP = {
-	visible: true,
-	loaded: false,
-	idle: false,
-	hiddenTime: new Date(0)
+var HISTORY_INTERVALS = {
+	hashRate: getTimeScaleMillis(TIME_SCALES.HASHRATE.resolution),
+	balances: getTimeScaleMillis(TIME_SCALES.BALANCES.resolution)
 };
 
-// Last API Update
+// Last API and History Update
 var lastUpdate = new Date(0);
+var lastHashrateHistoryUpdate = new Date(0);
+var lastBalancesHistoryUpdate = new Date(0);
 
 // Last result cacheID
 var cacheID = null;
@@ -81,9 +81,9 @@ var historicalHashRateURL = '/historical/hashRate/%s/%s/%s'; // /historical/hash
 var historicalBalancesURL = '/historical/balances/%s/%s/%s'; // /historical/balances/{btcAddr}/{resolution}/{range}
 var address = null;
 
-// Interval object storage, how often to update, and how often to query the API
+// Interval object storage, how often to update the gui, api, and history
 var intervalId = 0;
-var updateInterval = 1000 * 1; // Set to 5 seconds until history is loaded
+var updateInterval = 1000 * 1;
 var apiInterval = 1000 * 60;
 var idleTimeout = 1000 * 60;
 
@@ -106,14 +106,16 @@ var lineChartDefaults = {
         },
         xAxis: {
         	type: 'datetime',
-            maxZoom: 14 * 24 * 3600000, // fourteen days
             title: {
                 text: null
             },
-	        dateTimeLabelFormats: { // don't display the dummy year
+	        dateTimeLabelFormats: {
 	            month: '%e. %b',
 	            year: '%b'
 	        }
+        },
+        yAxis: {
+        	min: 0
         },
         legend: {
             enabled: false
@@ -125,16 +127,16 @@ var historicalHashrateLineChart = {
 		yAxis: {
             title: {
                 text: 'kHash/s'
-            },
-            plotLines: [{
-                value: 0,
-                width: 1,
-                color: 'rgba(255, 61, 61, 1)'
-            }]
+            }
         },
         series: [{
             name: 'Hashrate',
-            data: []
+            data: [],
+            color: 'rgba(255, 61, 61, 1)',
+            marker: {
+            	symbol: 'circle',
+            	radius: 2
+            }
         }],
         tooltip: {
             valueSuffix: 'kH/s',
@@ -147,35 +149,36 @@ var historicalBalanceLineChart = {
 	yAxis: {
         title: {
             text: 'btc'
-        },
-        plotLines: [{
-            value: 0,
-            width: 1,
-            color: 'rgba(61, 255, 61, 1)'
-        },
-        {
-            value: 0,
-            width: 1,
-            color: 'rgba(255, 165, 61, 1)'
-        },
-        {
-            value: 0,
-            width: 1,
-            color: 'rgba(255, 165, 61, 1)'
-        }]
+        }
     },
     series: [{
         name: 'Confirmed',
-        data: []
+        data: [],
+        color: 'rgba(61, 61, 255, 1)',
+        marker: {
+        	symbol: 'circle',
+        	radius: 2
+        }
     },
     {
         name: 'Unconverted',
-        data: []
+        data: [],
+        color: 'rgba(255, 165, 61, 1)',
+        marker: {
+        	symbol: 'circle',
+        	radius: 2
+        }
     },
     {
         name: 'Sent',
-        data: []
-    }],
+        data: [],
+        color: 'rgba(61, 255, 61, 1)',
+        marker: {
+        	symbol: 'circle',
+        	radius: 2
+        }
+    }
+    ],
     tooltip: {
         valuePrefix: '฿',
         valueDecimals: 8
@@ -190,7 +193,6 @@ $.ajaxSetup({
 $(document).ready(function() {
 	
 	setDefaults();
-	setupFocusHandler();
 
 	// Grab Bitcoin address
 	address = $.url().param('address');
@@ -200,17 +202,21 @@ $(document).ready(function() {
 		return;
 	} else if (address !== undefined) {
 		if (!btcAddressRegex.test(address)) {
-			/*showError('Invalid BTC Address',
+			showError('Invalid BTC Address',
 					"Address didn't pass regex check and thus appears invalid. If this is incorrect, please contact administrator.",
-					false);*/
+					false);
 		}
+		
+		$('#btcAddress').val(address);
 	}
 	
 	initControls();
 		
 	initGraphs();
+	
+	updateBalancesVisibility();
 		
-	loadHistoricalData();
+	getHistoricalData(true);
 
 	startInterval();
 });
@@ -225,24 +231,6 @@ function setDefaults() {
 }
 
 function initControls() {
-	/*$("#idleMessage").dialog({
-	      modal: true,
-	      autoOpen: false,
-	      close: function(event, ui) {
-	    	  APP.idle = false;
-	      },
-	      buttons: {
-	          "Mmm, Fat!": function() {
-	            $( this ).dialog( "close" );
-	          }
-	      }
-	});
-	
-	$("#idleMode").button().click(function (event) {
-		APP.idle = true;
-		openIdleDialog();
-	});*/
-	
 	$('#resolution_hashrate button').click(function (e) {
 		if (LOADING.hashRate === STATES.READY) {
 			TIME_SCALES.HASHRATE.resolution = $(this).val();
@@ -274,45 +262,67 @@ function initControls() {
 		}
 		e.preventDefault();
 	});
+	
+	// Set visiblity defaults
+	if (SHOWING.BALANCES.confirmed) {
+		$('#visibility_balances label[value="confirmed"]').button('toggle');
+	}
+	if (SHOWING.BALANCES.unconverted) {
+		$('#visibility_balances label[value="unconverted"]').button('toggle');
+	}
+	if (SHOWING.BALANCES.sent) {
+		$('#visibility_balances label[value="sent"]').button('toggle');
+	}
+	
+	$('#visibility_balances label').click(function (e) {
+		var name = $(this).find('input').val();
+		
+		SHOWING.BALANCES[name] = !SHOWING.BALANCES[name];
+		
+		updateBalancesVisibility();
+	});
 }
 
 function initGraphs() {
 	// Create hashrate graph
-	$('#historalHashrate').highcharts($.extend({}, lineChartDefaults, historicalHashrateLineChart));
+	$('#historalHashrate').highcharts($.extend(true, {}, lineChartDefaults, historicalHashrateLineChart));
 	GRAPHS.historicalHashrate = $('#historalHashrate').highcharts();
 
 	// Create balances graph
-	$('#historicalBalances').highcharts($.extend({}, lineChartDefaults, historicalBalanceLineChart));
+	$('#historicalBalances').highcharts($.extend(true, {}, lineChartDefaults, historicalBalanceLineChart));
 	GRAPHS.historicalBalances = $('#historicalBalances').highcharts();
 };
 
-function loadHistoricalData() {
-	console.log('LOADING DATA');
+function getHistoricalData(force) {
+	var lastHashrateHistoryCall = new Date().getTime() - lastHashrateHistoryUpdate.getTime();
+	if (force || lastHashrateHistoryCall >= HISTORY_INTERVALS.hashRate) {
+		updateHashRateHistory();
+	}
 	
-	updateHashRateHistory();
-	updateBalancesHistory();
-	
-	APP.loaded = true;
+	var lastHashrateBalancesCall = new Date().getTime() - lastBalancesHistoryUpdate.getTime();
+	if (force || lastHashrateBalancesCall >= HISTORY_INTERVALS.balances) {
+		updateBalancesHistory();
+	}
 }
 
 function unloadData() {
-	console.log('UNLOADING DATA');
-	
 	clearHistoricalHashRate();
 	clearHistoricalBalances();
-	
-	clearCurrentData();
-	
-	APP.loaded = false;
 }
 
 function updateHashRateHistory() {
 	TIME_SCALES.HASHRATE.range = setTimeScaleRange(TIME_SCALES.HASHRATE.range,
 			TIME_SCALES.HASHRATE.resolution, 'hashrate');
 	
+	HISTORY_INTERVALS.hashRate = getTimeScaleMillis(TIME_SCALES.HASHRATE.resolution);
+	
 	if (LOADING.hashRate === STATES.READY) {
 		LOADING.hashRate = STATES.LOADING;
+		
+		lastHashrateHistoryUpdate = new Date();
+		
 		disableTimeScaleButtons('hashrate');
+		
 		showHashRateLoading();
 		
 		var url = sprintf(historicalHashRateURL, address, TIME_SCALES.HASHRATE.resolution, TIME_SCALES.HASHRATE.range);
@@ -331,9 +341,15 @@ function updateBalancesHistory() {
 	TIME_SCALES.BALANCES.range = setTimeScaleRange(TIME_SCALES.BALANCES.range,
 			TIME_SCALES.BALANCES.resolution, 'balances');
 	
+	HISTORY_INTERVALS.balances = getTimeScaleMillis(TIME_SCALES.BALANCES.resolution);
+	
 	if (LOADING.balances === STATES.READY) {
 		LOADING.balances = STATES.LOADING;
+		
+		lastBalancesHistoryUpdate = new Date();
+		
 		disableTimeScaleButtons('balances');
+		
 		showBalancesLoading();
 		
 		var url = sprintf(historicalBalancesURL, address, TIME_SCALES.BALANCES.resolution, TIME_SCALES.BALANCES.range);
@@ -346,6 +362,12 @@ function updateBalancesHistory() {
 	}
 	
 	updateTimeScales(TIME_SCALES.BALANCES.range, TIME_SCALES.BALANCES.resolution, 'balances');
+}
+
+function updateBalancesVisibility() {
+	GRAPHS.historicalBalances.series[0].setVisible(SHOWING.BALANCES.confirmed);
+	GRAPHS.historicalBalances.series[1].setVisible(SHOWING.BALANCES.unconverted);
+	GRAPHS.historicalBalances.series[2].setVisible(SHOWING.BALANCES.sent);
 }
 
 function enableTimeScaleButtons(id) {
@@ -443,13 +465,6 @@ function clearHistoricalBalances() {
 	HISTORICAL_DATA.unconverted = [];
 }
 
-function clearCurrentData() {
-	CURRENT_DATA.hashRate = [];
-	CURRENT_DATA.sent = [];
-	CURRENT_DATA.confirmed = [];
-	CURRENT_DATA.unconverted = [];
-}
-
 function doUpdate() {
 	var lastAPICall = new Date().getTime() - lastUpdate.getTime();	
 	
@@ -459,42 +474,11 @@ function doUpdate() {
 		}
 	}
 	
-	checkIdle();
-	
-	if (APP.idle && APP.loaded) {
-		unloadData();
-		openIdleDialog();
-	} else if (!APP.idle && !APP.loaded) {
-		loadHistoricalData();
-		updateAPI();
-	}
-	
-	if (!APP.idle && APP.loaded) {
-		updateGUI();
-	}
-}
+	// False to only update at specified resolution
+	getHistoricalData(false);
 
-function checkIdle() {
-	if (!APP.visible && !APP.idle) {
-		var hiddenDuration = new Date().getTime() - APP.hiddenTime.getTime();
-		
-		if (hiddenDuration >= idleTimeout) {
-			APP.idle = true;
-		}
-	}
+	updateGUI();
 }
-
-/**
- * WHERE I WAS:
- * 1) Sorting data into a combined array every time history or current data is updated
- * OR two separate series again with historical and current data
- * 
- * 1a) Historical data with a start and end date so current data remains current or clear our current every time history changes?
- * 
- * 2) Get show working!
- * 
- * 3) Finish re-implementing fat-free mode
- */
 
 function updateAPI() {
 	lastUpdate = new Date();
@@ -503,15 +487,14 @@ function updateAPI() {
 		if (data !== undefined && data.error == "" || data.error === undefined) {
 			performVersionCheck(data);
 
-			// Only fill data arrays when not idle
-			if (!APP.idle) {
-				updateGraphDataArrays(new Date(), data);
-			}
+			updateCurrentData(data);
+
+			updateValues();
 		} else {
-			showError(data.error);
+			showError('Remote Error', data.error);
 		}
 	}).error(function(err) {
-		showError('Local Server Unreachable');
+		showError('Update Error', 'Local Server Unreachable');
 	});
 }
 
@@ -519,7 +502,6 @@ function updateGUI() {
 	checkLoaded();
 	replotGraphs();
 	redrawGraphs();
-	updateValues();
 }
 
 function performVersionCheck(data) {
@@ -529,24 +511,26 @@ function performVersionCheck(data) {
 		wafflesVersion = rcvdVersion;
 	} else {
 		if (wafflesVersion !== rcvdVersion) {
-			$("#versionOutOfDate").show();
+			showVersionNotification();
 		}
 	}
 }
 
-function updateGraphDataArrays(date, data) {
+function updateCurrentData(data) {
 	if (cacheID != data.cacheID) {
+		var date = new Date(data.createdAt);
+		
 		var formatted = formatAPIValues(data);
 		
 		DATA_RANGE.HASHRATE.lastValue = date;
 		DATA_RANGE.BALANCES.lastValue = date;
 		
-		CURRENT_DATA.sent.push([ date, formatted.balances.sent ]);
-		CURRENT_DATA.confirmed.push([ date, formatted.balances.confirmed ]);
-		CURRENT_DATA.unconverted.push([ date, formatted.balances.unconverted ]);
+		CURRENT_DATA.sent = formatted.balances.sent;
+		CURRENT_DATA.confirmed = formatted.balances.confirmed;
+		CURRENT_DATA.unconverted = formatted.balances.unconverted;
 	
 		var khashrate = formatted.hashRate / 1000.0;
-		CURRENT_DATA.hashRate.push([ date, khashrate ]);
+		CURRENT_DATA.hashRate = khashrate;
 		
 		cacheID = data.cacheID;
 	}
@@ -578,11 +562,11 @@ function checkLoaded() {
 }
 
 function replotGraphs() {
-	GRAPHS.historicalHashrate.series[0].setData(HISTORICAL_DATA.hashRate.concat(CURRENT_DATA.hashRate), false);
+	GRAPHS.historicalHashrate.series[0].setData(HISTORICAL_DATA.hashRate, false);
 
-	GRAPHS.historicalBalances.series[0].setData(HISTORICAL_DATA.confirmed.concat(CURRENT_DATA.confirmed), false);
-	GRAPHS.historicalBalances.series[1].setData(HISTORICAL_DATA.unconverted.concat(CURRENT_DATA.unconverted), false);
-	GRAPHS.historicalBalances.series[2].setData(HISTORICAL_DATA.sent.concat(CURRENT_DATA.sent), false);
+	GRAPHS.historicalBalances.series[0].setData(HISTORICAL_DATA.confirmed, false);
+	GRAPHS.historicalBalances.series[1].setData(HISTORICAL_DATA.unconverted, false);
+	GRAPHS.historicalBalances.series[2].setData(HISTORICAL_DATA.sent, false);
 }
 
 function reflowGraphs() {
@@ -626,25 +610,37 @@ function getTickValues(firstValue, lastValue) {
 function updateValues() {
 	updateHashrateMetrics();
 	
-	var currentHashrate = getLastValue(CURRENT_DATA.hashRate, 1, 0);
+	setValue("#hashrate", sprintf(hashrateDecimalFormatString, CURRENT_DATA.hashRate));
 	
-	$('#hashrate').html(sprintf(hashrateDecimalFormatString, currentHashrate));
+	setValue("#sent", sprintf(bitcoinFormatString, CURRENT_DATA.sent));
+	setValue("#confirmed", sprintf(bitcoinFormatString, CURRENT_DATA.confirmed));
+	setValue("#unconverted", sprintf(bitcoinFormatString, CURRENT_DATA.unconverted));
 	
-	var currentSentBalance = getLastValue(CURRENT_DATA.sent, 1, 0);
-	var currentConfirmedBalance = getLastValue(CURRENT_DATA.confirmed, 1, 0);
-	var currentUnconvertedBalance = getLastValue(CURRENT_DATA.unconverted, 1, 0);
-	
-	$('#sent').html(sprintf(bitcoinFormatString, currentSentBalance));
-	$('#confirmed').html(sprintf(bitcoinFormatString, currentConfirmedBalance));
-	$('#unconverted').html(sprintf(bitcoinFormatString, currentUnconvertedBalance));
-	
-	var totalUnsentBalance = currentConfirmedBalance + currentUnconvertedBalance;
-	$('#unsent').html(sprintf(bitcoinFormatString, totalUnsentBalance));
+	var totalUnsentBalance = CURRENT_DATA.confirmed + CURRENT_DATA.unconverted;
+	setValue("#unsent", sprintf(bitcoinFormatString, totalUnsentBalance));
 
 	if (lastUpdate.getTime() > 0) {
-		$('#updated').html(lastUpdate.toLocaleString());
+		setValue("#updated", lastUpdate.toLocaleString());
 	} else {
-		$('#updated').html('Never');
+		setValue("#updated", 'Never');
+	}
+}
+
+function setValue(id, value, effect) {
+	if (effect === undefined) {
+		effect = true;
+	}
+	
+	var oldValue = $(id).html();
+	
+	$(id).html(value);
+	
+	if (oldValue != value && effect) {
+		$(id).delay(50);
+		for(var i = 0; i < 4; i++) {
+			$(id).animate({opacity: 0.0}, 200, 'linear')
+				.animate({opacity: 1}, 200, 'linear');
+		}
 	}
 }
 
@@ -665,7 +661,6 @@ function updateHashrateMetrics() {
 	var average = 0;
 	
 	var histLength = HISTORICAL_DATA.hashRate.length;
-	var curLength = CURRENT_DATA.hashRate.length;
 	
 	if (histLength > 0) {
 		min = HISTORICAL_DATA.hashRate[0][1];
@@ -677,24 +672,26 @@ function updateHashrateMetrics() {
 			max = Math.max(max, val);
 			sum += val;
 		}
+		
+		average = sum / histLength;
 	}
 	
-	for (var i = 0; i < curLength; i++) {
-		var val = CURRENT_DATA.hashRate[i][1];
-		min = Math.min(min, val);
-		max = Math.max(max, val);
-		sum += val;
-	}
-	
-	var totalLength = histLength + curLength;
-	
-	if (totalLength > 0) {
-		average = sum / totalLength;
-	}
-	
-	$('#minimumHR').html(sprintf(hashrateFormatString, average));
-	$('#averageHR').html(sprintf(hashrateFormatString, min));
-	$('#maximumHR').html(sprintf(hashrateFormatString, max));
+	setValue("#minimumHR", sprintf(hashrateFormatString, average));
+	setValue("#averageHR", sprintf(hashrateFormatString, min));
+	setValue("#maximumHR", sprintf(hashrateFormatString, max));
+}
+
+function showVersionNotification() {
+	$.pnotify({
+	    title: 'WAFFLEStats Updated',
+	    text: 'Refresh this page to start using the latest version now!',
+	    type: 'info',
+	    icon: 'fa fa-arrow-up',
+	    sticker: false,
+	    closer_hover: false,
+	    hide: true,
+	    delay: 60*1000
+	});
 }
 
 function showError(title, error, autoHide) {
@@ -708,22 +705,6 @@ function showError(title, error, autoHide) {
 	    hide: autoHide,
 	    delay: 30*1000
 	});
-}
-
-function openIdleDialog() {
-	if (!$("#idleMessage").dialog("isOpen")) {
-		$("#idleMessage").dialog("open");
-	}
-}
-
-function isIdleDialogOpen() {
-	return $("#idleMessage").dialog("isOpen");
-}
-
-function closeIdleDialog() {
-	if (isIdleDialogOpen()) {
-		$("#idleMessage").dialog("close");
-	}
 }
 
 function showHashRateLoading() {
@@ -754,56 +735,28 @@ function startInterval() {
 	}
 };
 
-
-function setupFocusHandler() {
-	var hidden = "hidden";
-
-	// Standards:
-	if (hidden in document) {
-		document.addEventListener("visibilitychange", onchange);
-	} else if ((hidden = "mozHidden") in document) {
-		document.addEventListener("mozvisibilitychange", onchange);
-	} else if ((hidden = "webkitHidden") in document) {
-		document.addEventListener("webkitvisibilitychange", onchange);
-	} else if ((hidden = "msHidden") in document) {
-		document.addEventListener("msvisibilitychange", onchange);
-	} else if ('onfocusin' in document) {
-		// IE 9 and lower:
-		document.onfocusin = document.onfocusout = onchange;
-	} else {
-		// All others:
-		window.onpageshow = window.onpagehide = window.onfocus = window.onblur = onchange;
-	}
-
-	function onchange(evt) {
-		var v = 'visible', h = 'hidden';
-		var state = v;
-		
-		var evtMap = {
-			focus : v,
-			focusin : v,
-			pageshow : v,
-			blur : h,
-			focusout : h,
-			pagehide : h
-		};
-
-		evt = evt || window.event;
-
-		if (evt.type in evtMap) {
-			state = evtMap[evt.type];
-		} else {
-			state = this[hidden] ? "hidden" : "visible";
-		}
-
-		if (state === h) {
-			APP.visible = false;
-			console.log('invisible');
-			APP.hiddenTime = new Date();
-		} else {
-			APP.visible = true;
-			console.log('visible');
-		}
+function getTimeScaleMillis(str) {
+	switch (str) {
+	case '1min':
+		return 1000*60;
+	case '5min':
+		return 1000*60*5;
+	case '1hr':
+		return 1000*60*60;
+	case '1day':
+		return 1000*60*60*24;
+	case '6hr':
+		return 1000*60*60*6;
+	case '12hr':
+		return 1000*60*60*12;
+	case '24hr':
+		return 1000*60*60*24;
+	case '1wk':
+		return 1000*60*60*24*7;
+	case '2wk':
+		return 1000*60*60*24*7*2;
+	case '1mo':
+		return 1000*60*60*24*7*4;
 	}
 }
 
