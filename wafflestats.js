@@ -43,6 +43,14 @@ app.configure('development', function() {
 	mongoose.connect('mongodb://localhost/waffles-dev');
 });
 
+// Added to run final development tests on production-levels of data
+// Kind of dangerous, but since we only read data this should be fine
+app.configure('devel-prod', function() {
+	app.use(express.errorHandler());
+	app.locals.pretty = true;
+	mongoose.connect('mongodb://localhost/waffles-dev');
+});
+
 app.configure('test', function() {
 	app.use(express.errorHandler());
 	app.locals.pretty = true;
