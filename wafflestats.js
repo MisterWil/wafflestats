@@ -48,7 +48,7 @@ app.configure('development', function() {
 app.configure('devel-prod', function() {
 	app.use(express.errorHandler());
 	app.locals.pretty = true;
-	mongoose.connect('mongodb://localhost/waffles-dev');
+	mongoose.connect('mongodb://localhost/waffles');
 });
 
 app.configure('test', function() {
