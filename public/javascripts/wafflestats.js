@@ -208,15 +208,16 @@ $(document).ready(function() {
 	setDefaults();
 
 	// Grab Bitcoin address
-	address = $.url().param('address');
+	address = $.url().param('address').trim();
 	
 	if (address === undefined) {
 		window.location.replace('/');
 		return;
 	} else if (address !== undefined) {
 		if (!btcAddressRegex.test(address)) {
-			showError('Invalid BTC Address',
-					"Address didn't pass regex check and thus appears invalid. If this is incorrect, please contact administrator.",
+			showError('BTC Address Error',
+					"Address didn't pass regex check and thus appears invalid. This does not mean it IS invalid, however. " +
+					"If this is incorrect, please contact administrator.",
 					false);
 		}
 		
