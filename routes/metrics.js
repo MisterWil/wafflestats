@@ -4,21 +4,41 @@ var extend = require("xtend");
 var mongoose = require('mongoose');
 var History = mongoose.model('History');
 
-module.exports = function(app, rclient) {
-	var routes = {};
+var METRICS = 'metrics';
+var expireSeconds = 600; // 10 minutes
 
-	routes.get = function(req, res) {
-	   
-		getMetrics(function (err, result) {
-			if (err) {
-				return res.send({ error: err });
-			}
-			
-			return res.send(result);
-		});
-	};
-	
-	return routes;
+module.exports = function(app, rclient) {
+    var routes = {};
+
+    routes.get = function(req, res) {
+
+        // Check if we have cached metrics since this is an "expensive" operation
+        rclient.get(METRICS, function(err, metrics) {
+            if (metrics) {
+                // Send cached metrics
+                return res.send(JSON.parse(metrics));
+            }
+
+            // Otherwise, update the metrics and cache them
+            getMetrics(function(err, metrics) {
+                if (err) {
+                    return res.send({
+                        error : err
+                    });
+                }
+                
+                cacheMetrics(metrics);
+                return res.send(metrics);
+            });
+        });
+    };
+    
+    function cacheMetrics(metrics) {
+        rclient.set(METRICS, JSON.stringify(metrics));
+        rclient.expire(METRICS, expireSeconds);
+    }
+
+    return routes;
 };
 
 function getMetrics(callback) {
