@@ -19,6 +19,7 @@ var app = express();
 
 var current = require('./routes/current')(app, rclient);
 var historical = require('./routes/historical')(app, rclient);
+var metrics = require('./routes/metrics')(app, rclient);
 
 app.configure(function() {
 	// Waffles Version Info
@@ -68,6 +69,8 @@ app.get('/stats', routes.stats);
 app.get('/current/:address', current.temp_api);
 app.get('/historical/hashRate/:address/:resolution/:range', historical.granularHashRate);
 app.get('/historical/balances/:address/:resolution/:range', historical.granularBalances);
+
+app.get('/metrics', metrics.get);
 
 // Backwards compatibility
 app.get('/temp-api/:address', current.temp_api);
