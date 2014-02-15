@@ -3,15 +3,54 @@ extends bootstrap
 block content
   .container-fluid
     .container
-      h1 Welcome to WAFFLEStats
-      p Live and historical statistics pulled from wafflepool for monitoring your hashrate and balances!
-      p To get started, just enter the bitcoin address used on wafflepool and hit go.
-      br
-      form(role="address", name="stats", action="/stats", method="get")
-        .form-inline
-          label.sr-only(for="address") Bitcoin Address
-          input.form-control(type="text", placeholder="Bitcoin Address", id="address", name="address", size="42")
-          button.btn.btn-success(type="submit" value="Go") Go
+      p.introduction
+        h1 Welcome to WAFFLEStats
+        p Live and historical statistics pulled from wafflepool for monitoring your hashrate and balances!
+        p To get started, just enter the bitcoin address used on wafflepool and hit go.
+    
+    .container
+      p.address
+        form(role="address", name="stats", action="/stats", method="get")
+          .form-inline
+            label.sr-only(for="address") Bitcoin Address
+            input.form-control(type="text", placeholder="Bitcoin Address", id="address", name="address", size="42")
+            button.btn.btn-success(type="submit" value="Go") Go
+     
+    .container     
+      p.metrics   
+        table.table
+          tr
+            th
+            th Lifetime
+            th Last 24 Hours
+          tr
+            th Total Addresses:
+            td#total_addresses 0
+            td
+          tr
+            th Total Datapoints:
+            td#lifetime_totalDatapoints 0
+            td#last24_totalDatapoints 0
+          tr
+            th Datapoints/second:
+            td#lifetime_dps 0
+            td#last24_dps 0
+          tr
+            th Average Hashrate:
+            td#lifetime_averageHashrate 0
+            td#last24_averageHashrate 0
+          tr
+            th Maximum Hashrate:
+            td#lifetime_maximumHashrate 0
+            td#last24_maximumHashrate 0
+          tr
+            th Average Sent:
+            td#lifetime_averageSent 0
+            td#last24_averageSent 0
+          tr
+            th Maximum Sent:
+            td#lifetime_maximumSent 0
+            td#last24_maximumSent 0
         
 block scripts
   script(src='/javascripts/index.js')
