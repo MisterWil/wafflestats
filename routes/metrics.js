@@ -8,12 +8,13 @@ module.exports = function(app, rclient) {
 	var routes = {};
 
 	routes.get = function(req, res) {
+	   
 		getMetrics(function (err, result) {
 			if (err) {
 				return res.send({ error: err });
 			}
 			
-			res.send(result);
+			return res.send(result);
 		});
 	};
 	
@@ -23,36 +24,45 @@ module.exports = function(app, rclient) {
 function getMetrics(callback) {
 	var aggregateData = {};
 	
-	// Get unique addresses
-	History.aggregate(uniqueAddressesPipeline).exec(function (err, result) {
-		if (err) {
-			return callback(err, null);
-		}
-		
-		aggregateData.uniqueAddresses = result[0].uniqueAddresses;
-		
-		// Get lifetime aggregates
-		History.aggregate(aggregateVals(new Date(0))).exec(function (err, result) {
-			if (err) {
-				return callback(err, null);
-			}
-			
-			aggregateData.lifetime = result[0];
-			
-			// Get last 24 hour aggregates
-			var fromDate = new Date();
-			fromDate.setHours(fromDate.getHours() - 24);
-
-			History.aggregate(aggregateVals(fromDate)).exec(function (err, result) {
-				if (err) {
-					return callback(err, null);
-				}
-				
-				aggregateData.last24 = result[0];
-				
-				callback(null, aggregateData);
-			});
-		});
+	// Get collection statistics directly from mongodb
+	History.collection.stats(function (err, results) {
+	    if (err) {
+            return callback(err, null);
+        }
+	    
+	    aggregateData.stats = results;
+    	
+    	// Get unique addresses
+    	History.aggregate(uniqueAddressesPipeline).exec(function (err, result) {
+    		if (err) {
+    			return callback(err, null);
+    		}
+    		
+    		aggregateData.uniqueAddresses = result[0].uniqueAddresses;
+    		
+    		// Get lifetime aggregates
+    		History.aggregate(aggregateVals(new Date(0))).exec(function (err, result) {
+    			if (err) {
+    				return callback(err, null);
+    			}
+    			
+    			aggregateData.lifetime = result[0];
+    			
+    			// Get last 24 hour aggregates
+    			var fromDate = new Date();
+    			fromDate.setHours(fromDate.getHours() - 24);
+    
+    			History.aggregate(aggregateVals(fromDate)).exec(function (err, result) {
+    				if (err) {
+    					return callback(err, null);
+    				}
+    				
+    				aggregateData.last24 = result[0];
+    				
+    				callback(null, aggregateData);
+    			});
+    		});
+    	});
 	});
 }
 
