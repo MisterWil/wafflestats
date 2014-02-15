@@ -29,7 +29,7 @@ function getMetrics(callback) {
 			return callback(err, null);
 		}
 		
-		aggregateData.uniqueAddress = result[0].uniqueAddresses;
+		aggregateData.uniqueAddresses = result[0].uniqueAddresses;
 		
 		// Get lifetime aggregates
 		History.aggregate(aggregateVals(new Date(0))).exec(function (err, result) {
