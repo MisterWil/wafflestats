@@ -29,7 +29,7 @@ mixin timeScale(name)
 block header
   form.navbar-form.navbar-left.hidden-xs.hidden-sm(role="address", name="stats", action="/stats", method="get")
       .form-group
-        input.form-control(type="text", placeholder="Bitcoin Address", size="42", name="address", id="btcAddress")
+        input.form-control(type="text", placeholder="Bitcoin Address", size="45", name="address", id="btcAddress")
       button.btn.btn-success(type="submit")
         i.fa.fa-refresh.fa-lg
   .nav.navbar-nav.navbar-right
@@ -79,9 +79,9 @@ block content
               h3 Historical Balance
           .row
             .col-sm-12
-              .hidden-xs.hidden-sm.text-left.pull-left
+              .text-left.pull-left
                 +visibility("balances", ['confirmed', 'unconverted', 'sent'])
-              .hidden-xs.text-right.pull-right
+              .text-right.pull-right
                 +timeScale("balances")
           .row
             .col-sm-12
@@ -109,7 +109,7 @@ block content
             td.nowrap.text-left#maximumHR 0 kH/s
       .col-md-10.text-center.fixed-fluid
         h3 Historical Hashrate
-        .timeScale.hidden-xs.text-right
+        .timeScale.text-right
           +timeScale("hashrate")
         #historalHashrate.graph
         
