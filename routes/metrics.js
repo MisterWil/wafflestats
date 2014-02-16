@@ -5,7 +5,7 @@ var mongoose = require('mongoose');
 var History = mongoose.model('History');
 
 var METRICS = 'metrics';
-var expireSeconds = 600; // 10 minutes
+var expireSeconds = 3600 // One hour.
 
 module.exports = function(app, rclient) {
     var routes = {};
