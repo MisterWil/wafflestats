@@ -23,7 +23,7 @@ var metrics = require('./routes/metrics')(app, rclient);
 
 app.configure(function() {
 	// Waffles Version Info
-	app.set('wafflesVersion', '0.64');
+	app.set('wafflesVersion', '0.65');
 
 	// all environments
 	app.set('port', process.env.PORT || 3000);
