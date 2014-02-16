@@ -1,7 +1,7 @@
 var hashrateFormatString = "%.2f kH/s";
 var dpsFormatString = "%.3f/s";
 var bitcoinFormatString = '<i class="fa fa-btc">&nbsp;%.8f';
-var bytesFormatString = "%f bytes";
+var bytesFormatString = "%0.3f bytes";
 var megabytesFormatString = "%.3f mb";
 var timeFormatString = "%s ago";
 
