@@ -20,7 +20,7 @@ var options = {
  * This is to prevent people from pinging the remote API
  * too often by injecting changes into the client side app.
  */
-var expireSeconds = 30;
+var expireSeconds = 55;
 
 module.exports = function(app, rclient) {
 	var routes = {};
