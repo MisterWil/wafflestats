@@ -1,5 +1,12 @@
 extends bootstrap
 
+block header
+  ul.nav.navbar-nav.navbar-right
+    li
+      a(href="https://github.com/wschrader/wafflestats")
+        i.fa.fa-github.fa-lg
+        | &nbsp; WAFFLEStats on Github
+
 block content
   .container-fluid
     .container
@@ -25,7 +32,7 @@ block content
             label.sr-only(for="address") Bitcoin Address
             input.form-control(type="text", placeholder="Bitcoin Address", id="address", name="address", size="45")
             button.btn.btn-success(type="submit" value="Go") Go
-     
+            
     .container     
       #metrics.panel-group
         .panel.panel-default
