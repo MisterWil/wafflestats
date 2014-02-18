@@ -106,7 +106,7 @@ function saveHistorical(address, data) {
 		
 		History.create(hist, function (err) {
 			if (err) {
-				return log.err(err);
+				return log.error(err);
 			}
 		});
 	}
