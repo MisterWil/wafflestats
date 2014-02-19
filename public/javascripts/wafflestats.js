@@ -338,28 +338,39 @@ function unloadData() {
 function updateHashRateHistory() {
 	TIME_SCALES.HASHRATE.range = setTimeScaleRange(TIME_SCALES.HASHRATE.range,
 			TIME_SCALES.HASHRATE.resolution, 'hashrate');
-	
-	HISTORY_INTERVALS.hashRate = SCALE_MILLIS['val_'+TIME_SCALES.HASHRATE.resolution];
-	
+
+	HISTORY_INTERVALS.hashRate = SCALE_MILLIS['val_'
+			+ TIME_SCALES.HASHRATE.resolution];
+
 	if (LOADING.hashRate === STATES.READY) {
 		LOADING.hashRate = STATES.LOADING;
-		
+
 		lastHashrateHistoryUpdate = new Date();
-		
+
 		disableTimeScaleButtons('hashrate');
-		
+
 		showHashRateLoading();
-		
+
 		var url = sprintf(historicalHashRateURL, address, TIME_SCALES.HASHRATE.resolution, TIME_SCALES.HASHRATE.range);
-		$.getJSON(url, function(history) {
-			if (history !== undefined && history.length > 0) {
-				processHistoricalHashRate(history);
+		
+		$.ajax({
+			url : url,
+			dataType : 'json',
+			success : function(history) {
+				if (history !== undefined && history.length > 0) {
+					processHistoricalHashRate(history);
+				}
+				LOADING.hashRate = STATES.LOADED;
+			},
+			timeout : 10000, // 10 second timeout
+			error : function(jqXHR, status, errorThrown) {
+				LOADING.hashRate = STATES.LOADED;
 			}
-			LOADING.hashRate = STATES.LOADED;
 		});
 	}
 
-	updateTimeScales(TIME_SCALES.HASHRATE.range, TIME_SCALES.HASHRATE.resolution, 'hashrate');
+	updateTimeScales(TIME_SCALES.HASHRATE.range,
+			TIME_SCALES.HASHRATE.resolution, 'hashrate');
 }
 
 function updateBalancesHistory() {
@@ -378,11 +389,20 @@ function updateBalancesHistory() {
 		showBalancesLoading();
 		
 		var url = sprintf(historicalBalancesURL, address, TIME_SCALES.BALANCES.resolution, TIME_SCALES.BALANCES.range);
-		$.getJSON(url, function(history) {
-			if (history !== undefined && history.length > 0) {
-				processHistoricalBalances(history);
+		
+		$.ajax({
+			url : url,
+			dataType : 'json',
+			success : function(history) {
+				if (history !== undefined && history.length > 0) {
+					processHistoricalBalances(history);
+				}
+				LOADING.balances = STATES.LOADED;
+			},
+			timeout : 10000, // 10 second timeout
+			error : function(jqXHR, status, errorThrown) {
+				LOADING.balances = STATES.LOADED;
 			}
-			LOADING.balances = STATES.LOADED;
 		});
 	}
 	
