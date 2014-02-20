@@ -1,7 +1,7 @@
 module.exports = function() {
 	var routes = {};
 	
-	routes.index = function(req, res){
+	routes.get = function(req, res){
 		  res.render('index', { title: 'WAFFLEStats' });
 	};
 	

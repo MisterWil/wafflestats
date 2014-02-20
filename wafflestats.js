@@ -4,22 +4,25 @@
  */
 
 var express = require('express');
-var mongoose = require('mongoose');
-var routes = require('./routes')();
+var app = express();
 var http = require('http');
 var path = require('path');
+
+var mongoose = require('mongoose');
+require('./models/models.js').initialize();
 
 var redis = require("redis");
 var rclient = redis.createClient();
 
-// Initialize mongoose schemas
-require('./models/models.js').initialize();
-
-var app = express();
-
+var index = require('./routes/index')();
 var current = require('./routes/current')(app, rclient);
 var historical = require('./routes/historical')(app, rclient);
 var metrics = require('./routes/metrics')(app, rclient);
+
+if (process.env.HASHID === undefined) {
+	console.log("Please set 'hashid' environment variable.");
+	process.exit(1);
+}
 
 app.configure(function() {
 	// Waffles Version Info
@@ -63,8 +66,8 @@ app.configure('production', function() {
 });
 
 // Setup routes
-app.get('/', routes.index);
-app.get('/stats', routes.stats);
+app.get('/', index.get);
+app.get('/stats', index.stats);
 
 app.get('/current/:address', current.temp_api);
 app.get('/historical/hashRate/:address/:resolution/:range', historical.granularHashRate);
