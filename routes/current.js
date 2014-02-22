@@ -98,6 +98,7 @@ module.exports = function(app, rclient) {
 function saveHistorical(address, data) {
 	if (data !== undefined && data.hash_rate !== undefined) {
 	    try {
+	        var hashrate = Number(data.hash_rate);
     	    var sent = Number(data.balances.sent);
     	    var confirmed = Number(data.balances.confirmed);
     	    var unconverted = Number(data.balances.unconverted);
@@ -105,13 +106,13 @@ function saveHistorical(address, data) {
             return log.error(err);
         }
 	    
-	    if (isNaN(sent) || isNaN(confirmed) || isNaN(unconverted)) {
+	    if (isNaN(hashrate) || isNaN(sent) || isNaN(confirmed) || isNaN(unconverted)) {
 	        return log.error("Detected NaN, exiting before save.");
 	    }
 	    
 		var hist = {
 			address : address,
-			hashRate : parseInt(data.hash_rate),
+			hashRate : hashrate,
 			balances : {
 				sent : sent,
 				confirmed : confirmed,
