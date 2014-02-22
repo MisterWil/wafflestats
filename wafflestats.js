@@ -19,6 +19,8 @@ var current = require('./routes/current')(app, rclient);
 var historical = require('./routes/historical')(app, rclient);
 var metrics = require('./routes/metrics')(app, rclient);
 
+var notification = require('./routes/notification')(app, rclient);
+
 if (process.env.HASHID === undefined) {
 	console.log("Please set 'hashid' environment variable.");
 	process.exit(1);
@@ -72,6 +74,8 @@ app.get('/stats', index.stats);
 app.get('/current/:address', current.temp_api);
 app.get('/historical/hashRate/:address/:resolution/:range', historical.granularHashRate);
 app.get('/historical/balances/:address/:resolution/:range', historical.granularBalances);
+
+app.get('/notification/:address', notification.get);
 
 app.get('/metrics', metrics.get);
 

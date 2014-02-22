@@ -5,6 +5,8 @@ var extend = require("xtend");
 var mongoose = require('mongoose');
 var History = mongoose.model('History');
 
+var Notification = require('../plugins/notification');
+
 var options = {
 	host : 'wafflepool.com',
 	port : 80,
@@ -16,9 +18,8 @@ var options = {
 };
 
 /*
- * Expire cached data every X seconds.
- * This is to prevent people from pinging the remote API
- * too often by injecting changes into the client side app.
+ * Expire cached data every X seconds. This is to prevent people from pinging
+ * the remote API too often by injecting changes into the client side app.
  */
 var expireSeconds = 55;
 
@@ -27,40 +28,40 @@ module.exports = function(app, rclient) {
 
 	routes.temp_api = function(req, res) {
 		if (req.params.address != undefined) {
-			
+
 			// Check if we have a value cached already
-			rclient.get(req.params.address, function (err, result) {
+			rclient.get(req.params.address, function(err, result) {
 				if (result) {
 					// Send cached result
 					return res.send(JSON.parse(result));
 				}
-				
+
 				// Ping the API
 				retrieveData(req, res);
 			});
-			
+
 		} else {
 			onError(req, res, null, "BTC Address Missing");
 		}
 	};
-	
+
 	function retrieveData(req, res) {
 		options.path = options.apiPath + '?address=' + req.params.address;
-		
+
 		rest.getJSON(options, function(statusCode, result) {
 			res.statusCode = statusCode;
-			
+
 			if (statusCode == 200) {
 				onSuccess(req, res, result);
 			} else {
-				onError(req, res, 'HTTP status code: ' + statusCode, "Remote API Unreachable");
+				onError(req, res, 'HTTP status code: ' + statusCode,
+						"Remote API Unreachable");
 			}
-		},
-		function (err) {
+		}, function(err) {
 			onError(req, res, err, "Remote API Unreachable");
 		});
 	}
-	
+
 	function onSuccess(req, res, result) {
 		// Inject custom version info, cacheID, and createdAt time
 		var inject = {
@@ -69,21 +70,27 @@ module.exports = function(app, rclient) {
 			createdAt : new Date()
 		};
 		result = extend(inject, result);
+
+		if (app.get('env') !== 'development') {
+			cacheResult(req.params.address, result);
+		}
 		
-		cacheResult(req.params.address, result);
 		saveHistorical(req.params.address, result);
-		
 		res.send(result);
+		
+		Notification.update(req.params.address, result);
 	}
 
 	function onError(req, res, err, errStr) {
 		if (err) {
 			log.error(err);
 		}
-		
-		res.send({ error: errStr });
+
+		res.send({
+			error : errStr
+		});
 	}
-	
+
 	function cacheResult(address, result) {
 		rclient.set(address, JSON.stringify(result));
 		rclient.expire(address, expireSeconds);
@@ -95,16 +102,16 @@ module.exports = function(app, rclient) {
 function saveHistorical(address, data) {
 	if (data !== undefined && data.hash_rate !== undefined) {
 		var hist = {
-				address: address,
-				hashRate: parseInt(data.hash_rate),
-				balances: {
-					sent: parseFloat(data.balances.sent),
-					confirmed: parseFloat(data.balances.confirmed),
-					unconverted: parseFloat(data.balances.unconverted)
-				}
-			};
-		
-		History.create(hist, function (err) {
+			address : address,
+			hashRate : parseInt(data.hash_rate),
+			balances : {
+				sent : parseFloat(data.balances.sent),
+				confirmed : parseFloat(data.balances.confirmed),
+				unconverted : parseFloat(data.balances.unconverted)
+			}
+		};
+
+		History.create(hist, function(err) {
 			if (err) {
 				return log.error(err);
 			}
@@ -113,12 +120,10 @@ function saveHistorical(address, data) {
 }
 
 function s4() {
-  return Math.floor((1 + Math.random()) * 0x10000)
-             .toString(16)
-             .substring(1);
+	return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
 };
 
 function guid() {
-  return s4() + s4() + '-' + s4() + '-' + s4() + '-' +
-         s4() + '-' + s4() + s4() + s4();
+	return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4()
+			+ s4() + s4();
 }
