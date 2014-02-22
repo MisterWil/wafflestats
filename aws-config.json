@@ -1,0 +1,5 @@
+{
+    "accessKeyId": "YOURAMAZONKEY",
+    "secretAccessKey": "YOURAMAZONSECRET",
+    "region": "us-west-2"
+}
