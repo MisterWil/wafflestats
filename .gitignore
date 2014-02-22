@@ -1,3 +1,4 @@
 /node_modules
 .settings
 /wafflestats.log
+/aws-config.json
