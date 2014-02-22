@@ -5,8 +5,6 @@ var extend = require("xtend");
 var mongoose = require('mongoose');
 var History = mongoose.model('History');
 
-var Notification = require('../plugins/notification');
-
 var options = {
 	host : 'wafflepool.com',
 	port : 80,
@@ -77,8 +75,6 @@ module.exports = function(app, rclient) {
 		
 		saveHistorical(req.params.address, result);
 		res.send(result);
-		
-		Notification.update(req.params.address, result);
 	}
 
 	function onError(req, res, err, errStr) {
@@ -101,15 +97,19 @@ module.exports = function(app, rclient) {
 
 function saveHistorical(address, data) {
 	if (data !== undefined && data.hash_rate !== undefined) {
-		var hist = {
-			address : address,
-			hashRate : parseInt(data.hash_rate),
-			balances : {
-				sent : parseFloat(data.balances.sent),
-				confirmed : parseFloat(data.balances.confirmed),
-				unconverted : parseFloat(data.balances.unconverted)
-			}
-		};
+	    try {
+    		var hist = {
+    			address : address,
+    			hashRate : parseInt(data.hash_rate),
+    			balances : {
+    				sent : parseFloat(data.balances.sent),
+    				confirmed : parseFloat(data.balances.confirmed),
+    				unconverted : parseFloat(data.balances.unconverted)
+    			}
+    		};
+	    } catch (err) {
+	        return log.error(err);
+	    }
 
 		History.create(hist, function(err) {
 			if (err) {
