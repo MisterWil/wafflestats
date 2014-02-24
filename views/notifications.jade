@@ -1,0 +1,34 @@
+extends bootstrap
+
+block header
+  ul.nav.navbar-nav.navbar-right
+    li
+      a(href="/stats?address=" + address)
+        i.fa.fa-arrow-left.fa-lg
+        | &nbsp; Back to Stats
+
+block content
+  .container-fluid
+    .container
+      if (error && error.length > 0)
+        .alert.alert-danger.alert-dismissable
+          button.close(type="button", data-dismiss="alert", aria-hidden="true") &times;
+          i.fa.fa-frown-o.fa-lg &nbsp;
+          strong= error
+      h1 Notifications
+      .container
+        h5 To set up notifications, start by entering your email address below. An email will be sent with a link to your notification management dasboard.
+        br
+      .container
+        form(role="addEmail", name="addEmail", action="/notifications/" + address, method="post")
+            .form
+              .form-group
+                label Bitcoin Address
+                p.form-control-static= address
+              .form-group
+                label(for="email") Email Address
+                input.form-control(type="email", placeholder="Email Address", id="email", name="email")
+              .form-group
+                button.btn.btn-success(type="submit" value="Add") Go
+      
+      

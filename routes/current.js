@@ -5,6 +5,8 @@ var extend = require("xtend");
 var mongoose = require('mongoose');
 var History = mongoose.model('History');
 
+var Notifications = require('../plugins/notifications.js');
+
 var options = {
 	host : 'wafflepool.com',
 	port : 80,
@@ -75,6 +77,8 @@ module.exports = function(app, rclient) {
 		
 		saveHistorical(req.params.address, result);
 		res.send(result);
+		
+		Notifications.update(req.params.address, result);
 	}
 
 	function onError(req, res, err, errStr) {

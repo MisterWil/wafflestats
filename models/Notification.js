@@ -2,15 +2,12 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 module.exports = function() {
-	var Address = new Schema({
-		address: { type: String, index: true, unique: true },
+	var Notification = new Schema({
+		address: { type: String, index: true },
+		email: { type: String, index: true },
+		validated: { type: Boolean, default: false },
 		
-		emails: [{
-			address: { type: String },
-			validated: { type: Boolean, default: false}
-		}],
-		
-		notifications: {
+		settings: {
 			hashrate: { type: Boolean, default: false }, 					// Hashrate notifications enabled
 			lastHashrateNotification: { type: Date, default: Date.now },	// When the last hashrate notification was sent out
 			
@@ -20,12 +17,16 @@ module.exports = function() {
 			threshold: { type: Number, default: 0.5 },						// Threshold value.
 			
 			payment: { type: Boolean, default: false }
-		},
-		
-		payments: [{
-			txn: { type: String },
-		}]
+		}
 	});
 	
-	mongoose.model('Address', Address);
+	// Set compound/multifield unique index in mongodb
+	Notification.index({
+        address : 1,
+        email : 1
+    }, {
+        unique : true
+    });
+	
+	mongoose.model('Notification', Notification);
 };

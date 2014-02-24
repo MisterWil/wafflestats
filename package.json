@@ -12,6 +12,9 @@
 	"mongoose": "3.8.x",
     "supertest": "0.9.0",
     "tracer": "*",
-    "redis": "*"
+    "redis": "*",
+    "aws-sdk": "2.x",
+    "connect-flash": "*",
+    "hashids": "0.3.3"
   }
 }

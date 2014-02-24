@@ -3,6 +3,7 @@
  * Module dependencies.
  */
 
+var flash = require('connect-flash');
 var express = require('express');
 var app = express();
 var http = require('http');
@@ -19,7 +20,7 @@ var current = require('./routes/current')(app, rclient);
 var historical = require('./routes/historical')(app, rclient);
 var metrics = require('./routes/metrics')(app, rclient);
 
-var notification = require('./routes/notification')(app, rclient);
+var notifications = require('./routes/notifications')(app, rclient);
 
 if (process.env.HASHID === undefined) {
 	console.log("Please set 'hashid' environment variable.");
@@ -29,6 +30,11 @@ if (process.env.HASHID === undefined) {
 app.configure(function() {
 	// Waffles Version Info
 	app.set('wafflesVersion', '0.66');
+	
+	// Flash!
+	app.use(express.cookieParser(process.env.HASHID));
+    app.use(express.session({ cookie: { maxAge: 60000 }}));
+    app.use(flash());
 
 	// all environments
 	app.set('port', process.env.PORT || 3000);
@@ -71,11 +77,16 @@ app.configure('production', function() {
 app.get('/', index.get);
 app.get('/stats', index.stats);
 
+app.get('/template', function (req, res) {
+    res.render('emails/setup', { title: 'WAFFLEStats' });
+});
+
 app.get('/current/:address', current.temp_api);
 app.get('/historical/hashRate/:address/:resolution/:range', historical.granularHashRate);
 app.get('/historical/balances/:address/:resolution/:range', historical.granularBalances);
 
-app.get('/notification/:address', notification.get);
+app.get('/notifications/:address', notifications.get);
+app.post('/notifications/:address', notifications.post);
 
 app.get('/metrics', metrics.get);
 
