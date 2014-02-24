@@ -2,3 +2,4 @@
 .settings
 /wafflestats.log
 /aws-config.json
+/aws.json
