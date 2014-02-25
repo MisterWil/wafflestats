@@ -1,26 +1,25 @@
 div
-  h1 WAFFLEStats
+  include header
   h4 Hash Rate Warning
-p
-  | WAFFLES hates to be the bearer of bad news, but your hash rate doesn't look so great right now.
+  
+p WAFFLES hates to be the bearer of bad news, but your hash rate doesn't look so great right now.
 p
   table
     tr
       th(style="text-align: left;") Current Hash Rate:
-      td 340.23kh/s
+      td= currentHashrate
     tr
-      th(style="text-align: left;") 15 Minute Average:
-      td 230.19kh/s
+      th(style="text-align: left;")
+        span= shortAverageMinutes
+        span &nbsp; Minute Average:
+      td= shortAverageHashrate
     tr
-      th(style="text-align: left;") 24 Hour Average:
-      td 920.23kh/s
-p
-  | Since you asked WAFFLES to tell you when your hash rate dropped below 60% of your average, we just thought you'd like to know.
-p
-  | Hopefully you can figure it out soon and get back on track. :-)
-p
-  | ♥ WAFFLES
-  
-div(style='font-size: 10px;')
-  | Don't want to keep getting these emails? &nbsp;
-  a(href="http://waffles.wilschrader.com/notifications/unsubscribe/HASHID") Clicky here to stop them!
+      th(style="text-align: left;")
+        span= longAverageHours
+        span &nbsp; Hour Average:
+      td= longAverageHashrate
+p Since you asked WAFFLES to tell you when your hash rate dropped below&nbsp;
+  span= descString
+  |, we just thought you'd like to know.
+
+include footer

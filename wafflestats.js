@@ -88,6 +88,9 @@ app.get('/historical/balances/:address/:resolution/:range', historical.granularB
 app.get('/notifications/:address', notifications.get);
 app.post('/notifications/:address', notifications.post);
 
+app.get('/notifications/config/:hashid', notifications.config.get);
+app.post('/notifications/config/:hashid', notifications.config.post);
+
 app.get('/metrics', metrics.get);
 
 // Backwards compatibility

@@ -15,6 +15,11 @@ block content
           button.close(type="button", data-dismiss="alert", aria-hidden="true") &times;
           i.fa.fa-frown-o.fa-lg &nbsp;
           strong= error
+      if (success && success.length > 0)
+        .alert.alert-success.alert-dismissable
+          button.close(type="button", data-dismiss="alert", aria-hidden="true") &times;
+          i.fa.fa-smile-o.fa-lg &nbsp;
+          strong= success
       h1 Notifications
       .container
         h5 To set up notifications, start by entering your email address below. An email will be sent with a link to your notification management dasboard.

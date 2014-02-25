@@ -1,0 +1,91 @@
+extends bootstrap
+
+block header
+  ul.nav.navbar-nav.navbar-right
+    li
+      a(href="/stats?address=" + address)
+        i.fa.fa-arrow-left.fa-lg
+        | &nbsp; Back to Stats
+
+block content
+  .container-fluid
+    .container
+      if (error && error.length > 0)
+        .alert.alert-danger.alert-dismissable
+          button.close(type="button", data-dismiss="alert", aria-hidden="true") &times;
+          i.fa.fa-frown-o.fa-lg &nbsp;
+          strong= error
+      if (success && success.length > 0)
+        .alert.alert-success.alert-dismissable
+          button.close(type="button", data-dismiss="alert", aria-hidden="true") &times;
+          i.fa.fa-smile-o.fa-lg &nbsp;
+          strong= success
+      h1 Notification Config
+      .container
+      
+        form(role="config", name="config", action="/notifications/config/" + notification.getHashId(), method="post")
+        
+          .form-group
+            label Bitcoin Address
+            p.form-control-static= notification.address
+            
+          .form-group
+            label Email Address
+            p.form-control-static= notification.email
+        
+          ul.nav.nav-tabs
+            li.active
+              a(href="#hashrate", data-toggle="tab") Hashrate Notifications
+            li
+              a(href="#payments", data-toggle="tab") Payment Notifications
+            li(style="margin-left: 10px;")
+              button.btn.btn-success(type="submit" value="Save") Save Settings
+            
+          .tab-content
+            br
+            #hashrate.tab-pane.active
+              .container
+                .form
+                  .form-group
+                    label(for="hashrateEnabledChk") Hashrate Notifications
+                    p.container
+                      input#hashrateEnabledChk.form-control(type="checkbox", name="hashrateEnabledChk", checked= notification.hashrateEnabled)
+                    input#hashrateEnabled(type="hidden", name="hashrateEnabled", value= notification.hashrateEnabled.toString())
+                  #hashrateSettings(style="display: none;")
+                    .form-group
+                      label(for="averageDays") Days for Average
+                      p.container The number of days to use to find your average hash rate to compare against.
+                      p.container
+                        input#averageDays(type="text",name="averageDays",value=notification.averageDays,data-slider-min="1",data-slider-max="7",data-slider-step="1",data-slider-value=notification.averageDays,data-slider-orientation="horizontal",data-slider-selection="after",data-slider-tooltip="hide")
+                        span(style="margin-left: 20px")
+                          span#averageDaysValue= notification.averageDays
+                          | &nbsp;day(s)
+                    .form-group
+                      label(for="averageMinutes") Minutes Before Notification
+                      p.container The number of minutes that your hash rate must be below your calculated average before a notification is sent.
+                      p.container
+                        input#averageMinutes(type="text",name="averageMinutes",value=notification.averageMinutes,data-slider-min="15",data-slider-max="60",data-slider-step="1",data-slider-value=notification.averageMinutes,data-slider-orientation="horizontal",data-slider-selection="after",data-slider-tooltip="hide")
+                        span(style="margin-left: 20px")
+                          span#hashrateMinutesValue= notification.averageMinutes
+                          | &nbsp;minutes
+                          
+                    - var fixedPercentVal = notification.percentThreshold * 100;
+                    .form-group
+                      label(for="percentThreshold") Percent Threshold
+                      p.container Send a notification when your hash rate drops below a percentage of your calculated average.
+                      p.container
+                        input#percentThreshold(type="text",name="percentThreshold",value=fixedPercentVal,data-slider-min="0",data-slider-max="100",data-slider-step="1",data-slider-value=fixedPercentVal,data-slider-orientation="horizontal",data-slider-selection="after",data-slider-tooltip="hide")
+                        span(style="margin-left: 20px")
+                          span#percentThresholdValue= fixedPercentVal
+                          | %
+            #payments.tab-pane
+              .container
+                .form
+                  .form-group
+                    label(for="paymentEnabledChk") Payment Notifications
+                    p.container
+                      input#paymentEnabledChk.form-control(type="checkbox", name="paymentEnabledChk" checked= notification.paymentEnabled)
+                    input#paymentEnabled(type="hidden", name="paymentEnabled", value= notification.paymentEnabled.toString())
+      
+block scripts
+  script(src='/javascripts/notificationConfig.js')

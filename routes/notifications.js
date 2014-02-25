@@ -1,5 +1,8 @@
 var log = require('../log');
 
+var Hashids = require("hashids"),
+hashids = new Hashids(process.env.HASHID);
+
 var Notifications = require('../plugins/notifications.js');
 
 var mongoose = require('mongoose');
@@ -9,8 +12,13 @@ module.exports = function(app, rclient) {
 	var routes = {};
 
 	routes.get = function(req, res) {
-		if (req.params.address != undefined) {
-			res.render('notifications', { title: 'WAFFLEStats - Notification Setup', address: req.params.address, error: req.flash('error') });
+		if (req.params.address !== undefined) {
+			res.render('notifications', {
+				title : 'WAFFLEStats - Notifications',
+				address : req.params.address,
+				error : req.flash('error'),
+				success : req.flash('success')
+			});
 		} else {
 			// TODO: Send error
 			res.redirect('/');
@@ -19,6 +27,42 @@ module.exports = function(app, rclient) {
 	
 	routes.post = function(req, res) {
 	    setupNotifications(req, res);
+	};
+	
+	routes.config = {};
+	
+	routes.config.get = function(req, res) {
+		if (req.params.hashid !== undefined) {
+			var id = Notification.getIdFromHash(req.params.hashid);
+			
+			Notification.findOneAndUpdate({_id: id}, {validated: true}, function (err, notification) {
+				if (err) {
+					// TODO: Send error
+					return res.redirect('/');
+				}
+				
+				res.render('notificationConfig', {
+					title : 'WAFFLEStats - Notification Configuration',
+					notification : notification,
+					error : req.flash('error'),
+					success : req.flash('success')
+				})
+			});
+		} else {
+			// TODO: Send error
+			res.redirect('/');
+		}
+	};
+	
+	routes.config.post = function(req, res) {
+		if (req.params.hashid !== undefined) {
+			var id = Notification.getIdFromHash(req.params.hashid);
+			
+			res.send(req.body);
+		} else {
+			// TODO: Send error
+			res.redirect('/');
+		}
 	};
 
 	return routes;
@@ -67,13 +111,16 @@ function setupNotifications(req, res) {
 }
 
 function sendSetupEmail(req, res, notification) {
-    try {
-        Notifications.sendSetupEmail(notification);
-    } catch (err) {
-        log.error(err);
-        req.flash('error', 'Sorry about this, but the email system appears to be a hot mess and has failed. Error has been logged.');
+	Notifications.sendSetupEmail(notification, function (err, response) {
+		if (err) {
+			log.error(err);
+			req.flash('error', 'Sorry, but emails seem to be broken right now. Let us know! We will try and fix it soon!');
+            return res.redirect('/notifications/' + notification.address);
+		}
+		
+		req.flash('success', 'An email has been sent with a link to your notification configuration page.');
         return res.redirect('/notifications/' + notification.address);
-    }
+	});
 }
 
 function validateEmail(email) { 
