@@ -29,7 +29,7 @@ if (process.env.HASHID === undefined) {
 
 app.configure(function() {
 	// Waffles Version Info
-	app.set('wafflesVersion', '0.7');
+	app.set('wafflesVersion', '0.71');
 	
 	// Flash!
 	app.use(express.cookieParser(process.env.HASHID));
