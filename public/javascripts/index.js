@@ -15,7 +15,7 @@ $(document).ready(function() {
 		return window.location.assign('/stats?address=' + address);
 	}
 	
-	getMetrics();
+	//getMetrics();
 });
 
 function getMetrics() {
