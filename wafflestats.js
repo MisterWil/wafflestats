@@ -91,6 +91,9 @@ app.post('/notifications/:address', notifications.post);
 app.get('/notifications/config/:hashid', notifications.config.get);
 app.post('/notifications/config/:hashid', notifications.config.post);
 
+app.get('/notifications/remove/:hashid', notifications.remove.get);
+app.get('/notifications/remove/confirm/:hashid', notifications.remove.confirm.get);
+
 app.get('/metrics', metrics.get);
 
 // Backwards compatibility
