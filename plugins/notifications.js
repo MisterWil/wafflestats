@@ -41,6 +41,51 @@ function sendSetupEmail(notification, callback) {
 }
 exports.sendSetupEmail = sendSetupEmail;
 
+function sendRemoveEmail(notification, callback) {
+	try {
+	    var hashid = notification.getHashId();
+	    
+	    var emailTemplate = getTemplate('emails/remove.jade');
+	    var html = emailTemplate({
+	        hashid: hashid
+	    });
+	    
+	    sendEmail(notification.email, 'WAFFLEStats Notification Removal', html, callback);
+	} catch (err) {
+		callback(err, null);
+	}
+}
+exports.sendRemoveEmail = sendRemoveEmail;
+
+function sendPaymentEmails(payment, callback) {
+	try {
+	    var emailTemplate = getTemplate('emails/payment.jade');
+	    
+	    var html = emailTemplate({
+	        address: payment.address,
+	        txn: payment.txn,
+	        amount: payment.amount,
+	        time: payment.time
+	    });
+	    
+	    Notification.find({address: payment.address, validated: true, paymentEnabled: true}, function (err, notifications) {
+	    	if (err) {
+	    		return callback(err, null);
+	    	}
+	    	
+	    	if (notifications) {
+		    	var notificationsLen = notifications.length;
+		    	for (var i = 0; i < notificationsLen; i++) {
+		    		sendEmail(notifications[i].email, 'WAFFLEStats Payment Notification', html, callback);
+		    	}
+	    	}
+	    });
+	    
+	} catch (err) {
+		callback(err, null);
+	}
+}
+
 function updatePayouts(address, data) {
 	if (data !== undefined && data.recent_payments !== undefined) {
 		var paymentsLength = data.recent_payments.length;
@@ -62,7 +107,11 @@ function updatePayouts(address, data) {
 					return;
 				}
 
-				console.log("SEND NOTIFICATION OF PAYOUT - " + payment.txn);
+				sendPaymentEmails(payment, function (err, data) {
+					if (err) {
+						return log.error(err);
+					}
+				});
 			});
 		}
 	}
