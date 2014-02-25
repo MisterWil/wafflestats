@@ -11,8 +11,8 @@ mixin visibility(name, options)
 mixin timeScale(name)
   .btn-group(id="resolution_#{name}")
     button.btn.btn-default.btn-xs.header(disabled="disabled") resolution by
-    button.btn.btn-primary.btn-xs(id="resolution_#{name}_1min", value="1min") 1 min
     button.btn.btn-primary.btn-xs(id="resolution_#{name}_5min", value="5min") 5 min
+    button.btn.btn-primary.btn-xs(id="resolution_#{name}_30min", value="30min") 30 min
     button.btn.btn-primary.btn-xs(id="resolution_#{name}_1hr", value="1hr") 1 hr
     button.btn.btn-primary.btn-xs(id="resolution_#{name}_1day", value="1day") 1 day
   .btn-group(id="range_#{name}")
@@ -22,9 +22,9 @@ mixin timeScale(name)
     button.btn.btn-primary.btn-xs.smallRange(id="range_#{name}_12hr", value="12hr") 12 hr
     button.btn.btn-primary.btn-xs.smallRange(id="range_#{name}_24hr", value="24hr") 24 hr
     button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_1day", value="1day") 1 day
+    button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_3day", value="3day") 3 day
     button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_1wk", value="1wk") 1 wk
     button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_2wk", value="2wk") 2 wk
-    button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_1mo", value="1mo") 1 mo
       
 block header
   form.navbar-form.navbar-left.hidden-xs.hidden-sm(role="address", name="stats", action="/stats", method="get")
@@ -35,11 +35,20 @@ block header
   .nav.navbar-nav.navbar-right
       ul.nav.navbar-nav
         li
+          a#notifications(href="/notifications/")
+            i.fa.fa-envelope.fa-lg &nbsp;
+            | Get Notifications
+        li
           a(href="#")
             label Last Updated:&nbsp;
             span#updated Never
 
 block content
+  .container-fluid
+    .alert.alert-info
+      i.fa.fa-heart.fa-lg &nbsp;
+      strong Love WAFFLEStats? Please, show it by donating bitcoins! Donate to: 1Pr87ypYdG8eMTNUXR4rT1q2P1VJ7yu1b5
+      
   .container-fluid
     .row
       .col-md-2.text-center.nowrap
