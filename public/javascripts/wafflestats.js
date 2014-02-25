@@ -62,11 +62,13 @@ var TIME_SCALES = {
 var SCALE_MILLIS = {
 	val_1min: 1000*60,
 	val_5min: 1000*60*5,
+	val_30min: 1000*60*30,
 	val_1hr: 1000*60*60,
 	val_6hr: 1000*60*60*6,
 	val_12hr: 1000*60*60*12,
 	val_24hr: 1000*60*60*24,
 	val_1day: 1000*60*60*24,
+	val_3day: 1000*60*60*24*3,
 	val_1wk: 1000*60*60*24*7,
 	val_2wk: 1000*60*60*24*7*2,
 	val_1mo: 1000*60*60*24*7*4,
@@ -227,6 +229,7 @@ $(document).ready(function() {
 		}
 		
 		$('#btcAddress').val(address);
+		$('#notifications').attr("href", "/notifications/"+address);
 	}
 	
 	initControls();
@@ -258,32 +261,52 @@ function setDefaults() {
 function initControls() {
 	$('#resolution_hashrate button').click(function (e) {
 		if (LOADING.hashRate === STATES.READY) {
-			TIME_SCALES.HASHRATE.resolution = $(this).val();
-			updateHashRateHistory();
+			var value = $(this).val();
+			
+			if (value !== undefined) {
+				value = value.trim();
+				TIME_SCALES.HASHRATE.resolution = value;
+				updateHashRateHistory();
+			}
 		}
 		e.preventDefault();
 	});
 	
 	$('#range_hashrate button').click(function (e) {
 		if (LOADING.hashRate === STATES.READY) {
-			TIME_SCALES.HASHRATE.range = $(this).val();
-			updateHashRateHistory();
+			var value = $(this).val();
+			
+			if (value !== undefined) {
+				value = value.trim();
+				TIME_SCALES.HASHRATE.range = value;
+				updateHashRateHistory();
+			}
 		}
 		e.preventDefault();
 	});
 	
 	$('#resolution_balances button').click(function (e) {
 		if (LOADING.balances === STATES.READY) {
-			TIME_SCALES.BALANCES.resolution = $(this).val();
-			updateBalancesHistory();
+			var value = $(this).val();
+			
+			if (value !== undefined) {
+				value = value.trim();
+				TIME_SCALES.BALANCES.resolution = value;
+				updateBalancesHistory();
+			}
 		}
 		e.preventDefault();
 	});
 	
 	$('#range_balances button').click(function (e) {
 		if (LOADING.balances === STATES.READY) {
-			TIME_SCALES.BALANCES.range = $(this).val();
-			updateBalancesHistory();
+			var value = $(this).val();
+			
+			if (value !== undefined) {
+				value = value.trim();
+				TIME_SCALES.BALANCES.range = value;
+				updateBalancesHistory();
+			}
 		}
 		e.preventDefault();
 	});
@@ -433,7 +456,7 @@ function setTimeScaleRange(range, resolution, id) {
 		$("#range_" + id + ' .smallRange').hide();
 		$("#range_" + id + ' .largeRange').show();
 	} else {
-		if ($.inArray(range, ['1day', '1wk', '2wk', '1mo']) !== -1) {
+		if ($.inArray(range, ['1day', '3day', '1wk', '2wk']) !== -1) {
 			range = '24hr';
 		}
 		$("#range_" + id + ' .smallRange').show();
