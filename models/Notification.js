@@ -15,7 +15,7 @@ module.exports = function() {
 		hashrateEnabled: { type: Boolean, default: false }, 			// Hashrate notifications enabled
 		averageDays: { type: Number, default: 1 },						// Number of hours used to calculate hashrate average
 		averageMinutes: { type: Number, default: 15 },					// How long the hashrate must remain low for a notification to trigger
-		percentThreshold: { type: Number, default: 0.5 },				// Percentage difference to trigger notification
+		percentThreshold: { type: Number, default: 50 },				// Percentage difference to trigger notification
 			
 		paymentEnabled: { type: Boolean, default: false }
 	});
