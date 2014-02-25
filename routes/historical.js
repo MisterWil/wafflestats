@@ -7,18 +7,20 @@ var History = mongoose.model('History');
 // Valid resolution and ranges
 var ONE_MINUTE = '1min';
 var FIVE_MINUTE = '5min';
+var THIRTY_MINUTE = '30min';
 var ONE_HOUR = '1hr';
 var SIX_HOUR = '6hr';
 var TWELVE_HOUR = '12hr';
 var TWENTYFOUR_HOUR = '24hr';
 var ONE_DAY = '1day';
+var THREE_DAY = '3day';
 var ONE_WEEK = '1wk';
 var TWO_WEEK = '2wk';
 var ONE_MONTH = '1mo';
 var TWO_MONTH = '2mo';
 
-var validResolutions = [ONE_MINUTE, FIVE_MINUTE, ONE_HOUR, ONE_DAY];
-var validRanges = [ONE_HOUR, SIX_HOUR, TWELVE_HOUR, TWENTYFOUR_HOUR, ONE_DAY, ONE_WEEK, TWO_WEEK, ONE_MONTH];
+var validResolutions = [FIVE_MINUTE, THIRTY_MINUTE, ONE_HOUR , ONE_DAY];
+var validRanges = [ONE_HOUR, SIX_HOUR, TWELVE_HOUR, TWENTYFOUR_HOUR, ONE_DAY, THREE_DAY, ONE_WEEK, TWO_WEEK];
 
 var rangesAbove = 4, onlyAcceptResolutionsAbove = 2; // If a range is larger than ONE_DAY, only allow resolutions above FIVE_MINUTE
 
@@ -38,7 +40,7 @@ module.exports = function(app, rclient) {
 				'balances.sent' : 1,
 				'balances.confirmed' : 1,
 				'balances.unconverted' : 1,
-			}
+			};
 			
 			History.find(where, fields, function(err, history) {
 				if (err) {
@@ -89,9 +91,7 @@ function processHistoricalAggregation(req, res, aggregationFunction) {
 		// Create the date object for how much data to pull
 		var rangeDate = new Date();
 		rangeDate.setHours(rangeDate.getHours() - getHours(range));
-		
-		var start = new Date();
-		
+
 		var pipeline = aggregationFunction(btcAddr, resolution, rangeDate);
 		var aggregateQuery = History.aggregate(pipeline);
 		
@@ -100,9 +100,7 @@ function processHistoricalAggregation(req, res, aggregationFunction) {
 				log.error(err);
 				return res.send({ error: err });
 			}
-			
-			var aggregationDuration = new Date().getTime() - start.getTime()
-			
+
 			var a = [].slice.call(result);
 				
 			res.send(a);
@@ -139,6 +137,7 @@ function getHashRateAggregatePipeline(btcAddr, resolution, fromDate) {
 	switch(resolution) {
 	case ONE_MINUTE:
 	case FIVE_MINUTE:
+	case THIRTY_MINUTE:
 		appendMinutes = true;
 	case ONE_HOUR:
 		appendHours = true;
@@ -156,6 +155,8 @@ function getHashRateAggregatePipeline(btcAddr, resolution, fromDate) {
     	
     	if (resolution === FIVE_MINUTE) {
     		resVal = 5;
+    	} else if (resolution === THIRTY_MINUTE) {
+    		resVal = 30;
     	}
     	
         groupBy["minute"] = {
@@ -262,6 +263,7 @@ function getBalanceAggregatePipeline(btcAddr, resolution, fromDate) {
 	switch(resolution) {
 	case ONE_MINUTE:
 	case FIVE_MINUTE:
+	case THIRTY_MINUTE:
 		appendMinutes = true;
 	case ONE_HOUR:
 		appendHours = true;
@@ -279,6 +281,8 @@ function getBalanceAggregatePipeline(btcAddr, resolution, fromDate) {
     	
     	if (resolution === FIVE_MINUTE) {
     		resVal = 5;
+    	} else if (resolution === THIRTY_MINUTE) {
+    		resVal = 30;
     	}
     	
         groupBy["minute"] = {
@@ -386,6 +390,8 @@ function getHours(range) {
 		return 24;
 	case ONE_DAY:
 		return 24;
+	case THREE_DAY:
+		return 24*3;
 	case ONE_WEEK:
 		return 24*7;
 	case TWO_WEEK:
