@@ -1,27 +1,20 @@
 $(document).ready(function() {
 	// Create hashrate setting javascript elements
-	$("#hashrateEnabledChk").bootstrapSwitch();
+	$("#hashrateEnabled").bootstrapSwitch();
 	$("#averageMinutes").slider().on('slide', hashrateMinutesListener);
 	$("#averageDays").slider().on('slide', hashrateDaysListener);
 	$("#percentThreshold").slider().on('slide', hashratePercentListener);
 
 	// Attach hashrate setting javascript element listeners
-	$("#hashrateEnabledChk").on('switchChange', function (e, data) {
+	$("#hashrateEnabled").on('switchChange', function (e, data) {
 		setHashrateSettingsVisible(data.value);
-		("#hashrateEnabled").val(data.value.toString());
 	});
 
+	// Create payment setting javascript elements
+	$("#paymentEnabled").bootstrapSwitch();
+	
 	// Set hashrate settings visible
 	setHashrateSettingsVisible($("#hashrateEnabled").is(':checked'));
-	
-	// Create payment setting javascript elements
-	$("#paymentEnabledChk").bootstrapSwitch();
-	
-	// Attach hashrate setting javascript element listeners
-	$("#paymentEnabledChk").on('switchChange', function (e, data) {
-		setHashrateSettingsVisible(data.value);
-		("#paymentEnabled").val(data.value.toString());
-	});
 });
 
 var hashrateMinutesListener = function(ev) {
