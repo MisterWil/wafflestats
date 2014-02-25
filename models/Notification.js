@@ -8,16 +8,15 @@ module.exports = function() {
 	var Notification = new Schema({
 		address: { type: String, index: true },
 		email: { type: String, index: true },
-		validated: { type: Boolean, default: false },
+		validated: { type: Boolean, default: false, index: true },
 		
-		lastHashrateNotification: { type: Date, default: Date.now },	// When the last hashrate notification was sent out
+		lastHashrateNotification: { type: Date, default: Date.now, index: true },	// When the last hashrate notification was sent out
 			
-		hashrateEnabled: { type: Boolean, default: false }, 			// Hashrate notifications enabled
-		averageDays: { type: Number, default: 1 },						// Number of hours used to calculate hashrate average
-		averageMinutes: { type: Number, default: 15 },					// How long the hashrate must remain low for a notification to trigger
-		percentThreshold: { type: Number, default: 50 },				// Percentage difference to trigger notification
+		hashrateEnabled: { type: Boolean, default: false, index: true }, 			// Hashrate notifications enabled
+		averageMinutes: { type: Number, default: 5 },					// How long the hashrate must remain low for a notification to trigger
+		threshold: { type: Number, default: 0 },						// Hashrate threshold
 			
-		paymentEnabled: { type: Boolean, default: false }
+		paymentEnabled: { type: Boolean, default: false, index: true }
 	});
 	
 	Notification.methods.getHashId = function getHashId() {

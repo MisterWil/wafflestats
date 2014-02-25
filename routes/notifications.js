@@ -14,14 +14,29 @@ var notificationConfig = {
 	paymentEnabled: false
 };
 
+//Regex to test bitcoin addresses before pinging for current data
+//Disabled for historical data so I can test locally using historical data
+var btcAddressRegex = /^[13][1-9A-HJ-NP-Za-km-z]{26,33}/;
+
+var MAX_AVERAGE_MINUTES = 60;
+
 module.exports = function(app, rclient) {
 	var routes = {};
-
+	
 	routes.get = function(req, res) {
 		if (req.params.address !== undefined) {
+			
+			var address = req.params.address.trim();
+			
+			// Regex test
+			if (!btcAddressRegex.test(address)) {
+				req.flash('error', "Can not create a notification for bitcoin address '"+address+"'. Contact someone about it.");
+				return res.redirect('/');
+			}
+			
 			res.render('notifications', {
 				title : 'WAFFLEStats - Notifications',
-				address : req.params.address,
+				address : address,
 				error : req.flash('error'),
 				success : req.flash('success')
 			});
@@ -69,6 +84,9 @@ module.exports = function(app, rclient) {
 			// Since checkboxes don't return false or "off" when unchecked, merge falses in
 			var result = req.body;
 			result = extend(notificationConfig, result);
+			
+			result.averageMinutes = Math.max(Math.min(result.averageMinutes, MAX_AVERAGE_MINUTES), 0);
+			result.threshold = Math.max(result.threshold, 0);
 			
 			Notification.findOneAndUpdate({_id: id}, result, function (err, notification) {
 				if (err) {
@@ -144,12 +162,19 @@ function setupNotifications(req, res) {
     console.log(address + ' - ' + email);
     
     if (address === undefined) {
-        // TODO: Send error
-        res.redirect('/');
+        return res.redirect('/');
     } else if (!validateEmail(email)) {
         req.flash('error', 'You must use a valid email address to register for notifications.');
         return res.redirect('/notifications/' + address);
     }
+    
+    address = address.trim();
+	
+	// Regex test
+	if (!btcAddressRegex.test(address)) {
+		req.flash('error', "Can not create a notification for bitcoin address '"+address+"'. Contact someone about it.");
+		return res.redirect('/');
+	}
     
     Notification.findOne({address: address, email: email}, function (err, notification) {
         if (err) {

@@ -52,40 +52,36 @@ block content
               .container
                 br
                 .form
+                   p.container
+                     | Hashrate notifications occur when your hashrate over the given period of time falls below a threshold.
+                     | These notifications will only occur once an hour, and only as long as your current data is being polled.
                   .form-group
                     label(for="hashrateEnabled") Hashrate Notifications
                     p.container
                       input#hashrateEnabled.form-control(type="checkbox", name="hashrateEnabled", checked= notification.hashrateEnabled)
                   #hashrateSettings(style="display: none;")
                     .form-group
-                      label(for="averageDays") Days for Average
-                      p.container The number of days to use to find your average hash rate to compare against.
+                      label(for="averageMinutes") Minutes for Calculated Average
+                      p.container The number of minutes used to find your average hashrate.
                       p.container
-                        input#averageDays(type="text",name="averageDays",value=notification.averageDays,data-slider-min="1",data-slider-max="7",data-slider-step="1",data-slider-value=notification.averageDays,data-slider-orientation="horizontal",data-slider-selection="after",data-slider-tooltip="hide")
-                        span(style="margin-left: 20px")
-                          span#averageDaysValue= notification.averageDays
-                          | &nbsp;day(s)
-                    .form-group
-                      label(for="averageMinutes") Minutes Before Notification
-                      p.container The number of minutes that your hash rate must be below your calculated average before a notification is sent.
-                      p.container
-                        input#averageMinutes(type="text",name="averageMinutes",value=notification.averageMinutes,data-slider-min="15",data-slider-max="60",data-slider-step="1",data-slider-value=notification.averageMinutes,data-slider-orientation="horizontal",data-slider-selection="after",data-slider-tooltip="hide")
+                        input#averageMinutes(type="text",name="averageMinutes",value=notification.averageMinutes,data-slider-min="5",data-slider-max="60",data-slider-step="1",data-slider-value=notification.averageMinutes,data-slider-orientation="horizontal",data-slider-selection="after",data-slider-tooltip="hide")
                         span(style="margin-left: 20px")
                           span#hashrateMinutesValue= notification.averageMinutes
                           | &nbsp;minutes
                     .form-group
-                      label(for="percentThreshold") Percent Threshold
-                      p.container Send a notification when your hash rate drops below a percentage of your calculated average.
+                      label(for="threshold") Threshold
+                      p.container Send a notification when your above calculated average drops below this number.
                       p.container
-                        input#percentThreshold(type="text",name="percentThreshold",value=notification.percentThreshold,data-slider-min="0",data-slider-max="100",data-slider-step="1",data-slider-value=notification.percentThreshold,data-slider-orientation="horizontal",data-slider-selection="after",data-slider-tooltip="hide")
-                        span(style="margin-left: 20px")
-                          span#percentThresholdValue= notification.percentThreshold
-                          | %
+                        input#threshold(type="number", name="threshold", value=notification.threshold, placeholder="kH/s")
+                        span(style="margin-left: 20px") kH/s
 
             #payments.tab-pane
               .container
                 br
                 .form
+                  p.container
+                     | Payment notifications occur whenever WAFFLEStats detects that a new payment has been sent out to your bitcoin address.
+                     | These notifications will only be sent out as payments occur, and only as long as your current data is being polled.
                   .form-group
                     label(for="paymentEnabled") Payment Notifications
                     p.container

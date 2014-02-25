@@ -6,20 +6,13 @@ p WAFFLES hates to be the bearer of bad news, but your hash rate doesn't look so
 p
   table
     tr
-      th(style="text-align: left;") Current Hash Rate:
-      td= currentHashrate
-    tr
       th(style="text-align: left;")
-        span= shortAverageMinutes
-        span &nbsp; Minute Average:
-      td= shortAverageHashrate
+        span Last&nbsp;
+        span= averageMinutes
+        span &nbsp;Minute Average:
+      td= averageMinutesHashrate
     tr
-      th(style="text-align: left;")
-        span= longAverageHours
-        span &nbsp; Hour Average:
-      td= longAverageHashrate
-p Since you asked WAFFLES to tell you when your hash rate dropped below&nbsp;
-  span= descString
-  |, we just thought you'd like to know.
+      th(style="text-align: left;") Threshold:
+      td= threshold
 
 include footer
