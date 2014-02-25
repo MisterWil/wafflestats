@@ -4,7 +4,7 @@ var Schema = mongoose.Schema;
 module.exports = function() {
 	var History = new Schema({
 		address: String,
-		createdAt: {type: Date, default: Date.now, expires: 60*60*24*7*4 },
+		createdAt: {type: Date, default: Date.now, expires: 60*60*24*7*2 },
 		hashRate: Number,
 		balances: {
 			sent: Number,
