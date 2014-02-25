@@ -10,6 +10,16 @@ block header
 block content
   .container-fluid
     .container
+      if (error && error.length > 0)
+        .alert.alert-danger.alert-dismissable
+          button.close(type="button", data-dismiss="alert", aria-hidden="true") &times;
+          i.fa.fa-frown-o.fa-lg &nbsp;
+          strong= error
+      if (success && success.length > 0)
+        .alert.alert-success.alert-dismissable
+          button.close(type="button", data-dismiss="alert", aria-hidden="true") &times;
+          i.fa.fa-smile-o.fa-lg &nbsp;
+          strong= success
       p.introduction
         h1 Welcome to WAFFLEStats
         
