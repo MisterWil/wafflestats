@@ -16,6 +16,7 @@
     "aws-sdk": "2.x",
     "connect-flash": "*",
     "hashids": "0.3.3",
-    "sprintf": "*"
+    "sprintf": "*",
+    "connect-redis" : "1.4.x"
   }
 }

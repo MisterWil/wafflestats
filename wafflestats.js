@@ -15,6 +15,8 @@ require('./models/models.js').initialize();
 var redis = require("redis");
 var rclient = redis.createClient();
 
+var RedisStore = require('connect-redis')(express);
+
 var index = require('./routes/index')();
 var current = require('./routes/current')(app, rclient);
 var historical = require('./routes/historical')(app, rclient);
@@ -32,8 +34,8 @@ app.configure(function() {
 	app.set('wafflesVersion', '0.72');
 	
 	// Flash!
-	app.use(express.cookieParser(process.env.HASHID));
-    app.use(express.session({ cookie: { maxAge: 60000 }}));
+	app.use(express.cookieParser());
+    app.use(express.session({ store: new RedisStore({ host: 'localhost', port: 3000, client: rclient }), secret: process.env.HASHID }))
     app.use(flash());
 
 	// all environments
@@ -41,7 +43,6 @@ app.configure(function() {
 	app.set('views', path.join(__dirname, 'views'));
 	app.set('view engine', 'jade');
 	app.use(express.favicon());
-	app.use(express.logger('dev'));
 	app.use(express.json());
 	app.use(express.urlencoded());
 	app.use(express.methodOverride());
@@ -50,6 +51,7 @@ app.configure(function() {
 });
 
 app.configure('development', function() {
+    app.use(express.logger('dev'));
 	app.use(express.errorHandler());
 	app.locals.pretty = true;
 	mongoose.connect('mongodb://localhost/waffles-dev');

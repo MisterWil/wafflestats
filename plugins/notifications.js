@@ -99,7 +99,7 @@ function sendHashrateEmail(notification, hashRate, callback) {
 	    var emailTemplate = getTemplate('emails/hashrate.jade');
 	    
 	    var html = emailTemplate({
-	    	hashId: notification.getHashId(),
+	    	hashid: notification.getHashId(),
 	        averageMinutes: notification.averageMinutes,
 	        averageMinutesHashrate: sprintf("%.2f kH/s", hashRate),
 	        threshold: sprintf("%.2f kH/s", notification.threshold)
