@@ -13,7 +13,7 @@ var mongoose = require('mongoose');
 require('./models/models.js').initialize();
 
 var redis = require("redis");
-var rclient = redis.createClient();
+var rclient = redis.createClient(6379, 'localhost');
 
 var RedisStore = require('connect-redis')(express);
 
@@ -35,7 +35,7 @@ app.configure(function() {
 	
 	// Flash!
 	app.use(express.cookieParser());
-    app.use(express.session({ store: new RedisStore({ host: 'localhost', port: 3000, client: rclient }), secret: process.env.HASHID }))
+    app.use(express.session({ store: new RedisStore({ host: 'localhost', port: 6379, client: rclient }), secret: process.env.HASHID }))
     app.use(flash());
 
 	// all environments
