@@ -1,22 +1,62 @@
-
-/**
- * Module dependencies.
- */
-
+// Require modules without configuration
 var flash = require('connect-flash');
 var express = require('express');
 var app = express();
 var http = require('http');
 var path = require('path');
+var fs = require('fs');
 
 var mongoose = require('mongoose');
-require('./models/models.js').initialize();
 
 var redis = require("redis");
-var rclient = redis.createClient(6379, 'localhost');
-
 var RedisStore = require('connect-redis')(express);
+var rclient = null;
 
+// Setup configuration file
+var configFile = "./configs/default.json";
+if (process.env.CONFIG !== undefined) {
+	configFile = process.env.CONFIG;
+}
+
+var configuration = null;
+try {
+	configuration = JSON.parse(fs.readFileSync(configFile));
+} catch (err) {
+	console.log("Err when loading config file: " + err.stack);
+	process.exit(1);
+}
+
+if (!configuration) {
+	console.log("Unable to process configuration file: " + configFile);
+	process.exit(1);
+}
+
+// Setup models
+require('./models/models.js').initialize(configuration);
+
+// Setup AWS
+require('./plugins/notifications.js').setAwsConfig(configuration.aws);
+
+// Set up specific environments
+app.configure('development', function() {
+    app.use(express.logger('dev'));
+	app.use(express.errorHandler());
+	app.locals.pretty = true;
+	mongoose.connect(configuration.development.mongo.address);
+	rclient = redis.createClient(configuration.development.redis.port, configuration.development.redis.address);
+});
+
+app.configure('production', function() {
+	mongoose.connect(configuration.production.mongo.address);
+	rclient = redis.createClient(configuration.production.redis.port, configuration.production.redis.address);
+});
+
+if (!rclient) {
+	console.log("Redis client not found...");
+	process.exit(1);
+}
+
+// Setup routes
 var index = require('./routes/index')();
 var current = require('./routes/current')(app, rclient);
 var historical = require('./routes/historical')(app, rclient);
@@ -24,18 +64,13 @@ var metrics = require('./routes/metrics')(app, rclient);
 
 var notifications = require('./routes/notifications')(app, rclient);
 
-if (process.env.HASHID === undefined) {
-	console.log("Please set 'hashid' environment variable.");
-	process.exit(1);
-}
-
 app.configure(function() {
 	// Waffles Version Info
 	app.set('wafflesVersion', '0.72');
 	
 	// Flash!
 	app.use(express.cookieParser());
-    app.use(express.session({ store: new RedisStore({ host: 'localhost', port: 6379, client: rclient }), secret: process.env.HASHID }))
+    app.use(express.session({ store: new RedisStore({ client: rclient }), secret: configuration.hashid }))
     app.use(flash());
 
 	// all environments
@@ -48,31 +83,6 @@ app.configure(function() {
 	app.use(express.methodOverride());
 	app.use(app.router);
 	app.use(express.static(path.join(__dirname, 'public')));
-});
-
-app.configure('development', function() {
-    app.use(express.logger('dev'));
-	app.use(express.errorHandler());
-	app.locals.pretty = true;
-	mongoose.connect('mongodb://localhost/waffles-dev');
-});
-
-// Added to run final development tests on production-levels of data
-// Kind of dangerous, but since we only read data this should be fine
-app.configure('devel-prod', function() {
-	app.use(express.errorHandler());
-	app.locals.pretty = true;
-	mongoose.connect('mongodb://localhost/waffles');
-});
-
-app.configure('test', function() {
-	app.use(express.errorHandler());
-	app.locals.pretty = true;
-	mongoose.connect('mongodb://localhost/waffles-test');
-});
-
-app.configure('production', function() {
-	mongoose.connect('mongodb://localhost/waffles');
 });
 
 // Setup routes

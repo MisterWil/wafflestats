@@ -1,10 +1,12 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-var Hashids = require("hashids"),
-hashids = new Hashids(process.env.HASHID);
+var Hashids = require("hashids");
 
-module.exports = function() {
+module.exports = function(configuration) {
+	
+	var hashids = new Hashids(configuration.hashid);
+	
 	var Notification = new Schema({
 		address: { type: String, index: true },
 		email: { type: String, index: true },

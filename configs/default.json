@@ -1,0 +1,32 @@
+{
+	"port" : 3000,
+	"hashid" : "correcthorsebatterystaple",
+	
+	"aws": {
+	    "accessKeyId": "ACCESSKEY",
+	    "secretAccessKey": "SECRETACCESSKEY",
+	    "region": "us-west-2"
+	},
+	
+	"development" : {
+		"redis" : {
+			"address": "localhost",
+			"port": 6397
+		},
+		
+		"mongo" : {
+			"address": "mongodb://localhost/waffles-dev"
+		}
+	},
+	
+	"production" : {
+		"redis" : {
+			"address": "localhost",
+			"port": 6397
+		},
+		
+		"mongo" : {
+			"address": "mongodb://localhost/waffles-dev"
+		}
+	}
+}

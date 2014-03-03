@@ -12,8 +12,7 @@ var fs = require('fs');
 // This was a stupid big where if I didn't pass the config to the new SES instance then
 // I would not be connected to the right region. Who the fuck knows why!
 var aws = require('aws-sdk');
-aws.config.loadFromPath('./aws.json');
-var ses = new aws.SES(aws.config);
+var ses = new aws.SES();
 
 var HASHRATE_EMAIL_MINUTES = 60; // Only send a hashrate notification email every 60 minutes
 
@@ -21,9 +20,19 @@ var HASHRATE_EMAIL_MINUTES = 60; // Only send a hashrate notification email ever
 // Example: To report on a low hashrate over 10 minutes, we need at least 8 points.
 var HASHRATE_MIN_POINT_PERCENT = 0.8;
 
-ses.listVerifiedEmailAddresses(function(err, data) {
-    console.log(data);
-});
+function setAwsConfig(config) {
+	aws.config = new aws.Config(config);
+	ses = new aws.SES(aws.config);
+	
+	ses.listVerifiedEmailAddresses(function(err, data) {
+	    if (!data) {
+	    	console.log("List Verified SES Email Addresses FAILED! Did you configure your AWS settings in ./configs?");
+	    } else {
+	    	console.log(data);
+	    }
+	});
+}
+exports.setAwsConfig = setAwsConfig;
 
 function update(address, data) {
 	updatePayouts(address, data);

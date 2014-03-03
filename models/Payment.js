@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-module.exports = function() {
+module.exports = function(configuration) {
 	var Payment = new Schema({
 	    address: { type: String, index: true },
 		txn: { type: String, index: true },
