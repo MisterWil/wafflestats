@@ -7,20 +7,20 @@ Live-updating graph dashboard for Wafflepool
 ### Requirements
 
 1. [NodeJS](http://nodejs.org/)
-1. [Redis](http://redis.io/)
-1. [MongoDB](http://www.mongodb.org/)
+2. [Redis](http://redis.io/)
+3. [MongoDB](http://www.mongodb.org/)
 
 ### Installation
 
-1. After installing all requirements, go to the Wafflestats directory
-1. Create a file named `aws.json`. For better understanding of AWS configuration on NodeJS, check the [NodeJS AWS-SDK Website](http://aws.amazon.com/sdkfornodejs/)
-1. Run the command `npm install`
-1. Run `HASHID=xxx node wafflestats.js`
-
-Note: The `HASHID` environment variable will be used as your Redis secret and the generation of Wafflestats email notifications secrets.
+1. After installing run 'npm install' on the root directory to install all node modules
+2. Go to the ./configs directory and make a copy of default.json
+3. Change hashid to a unique, random string. This will be used for both redis sessions as well as generating the email notification hash.
+4. Change your AWS secret keys and regions. For more information, see the [NodeJS AWS-SDK Website](http://aws.amazon.com/sdkfornodejs/).
+5. Configure your development/production redis and mongo connection information.
+6. Run 'NODE_ENV=PRODUCTION node wafflestats.js'
 
 ## Contributing
 
-1. Fork it
-1. Implement
-1. Pull request
+1. Fork!
+2. Change!
+3. Pull requests!
