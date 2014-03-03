@@ -29,7 +29,7 @@ mixin timeScale(name)
 block header
   form.navbar-form.navbar-left.hidden-xs.hidden-sm(role="address", name="stats", action="/stats", method="get")
       .form-group
-        input.form-control(type="text", placeholder="Bitcoin Address", size="45", name="address", id="btcAddress")
+        input.form-control(type="text", placeholder="Bitcoin Address", size="45", name="address", class="btcAddress")
       button.btn.btn-success(type="submit")
         i.fa.fa-refresh.fa-lg
   .nav.navbar-nav.navbar-right
@@ -52,6 +52,13 @@ block content
       
   .container-fluid
     .row
+      .col-md-2.hidden-lg.hidden-md
+        form(role="address", name="stats", action="/stats", method="get")
+          .input-group
+            input.form-control(type="text", placeholder="Bitcoin Address", size="45", name="address", class="btcAddress")
+            span.input-group-btn
+              button.btn.btn-success(type="submit")
+                i.fa.fa-refresh.fa-lg
       .col-md-2.text-center.nowrap
         h3 Current Balances
         br
