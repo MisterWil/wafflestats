@@ -228,7 +228,7 @@ $(document).ready(function() {
 					false);
 		}
 		
-		$('#btcAddress').val(address);
+		$('.btcAddress').val(address);
 		$('#notifications').attr("href", "/notifications/"+address);
 	}
 	
