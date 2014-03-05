@@ -56,6 +56,13 @@ if (!rclient) {
 	process.exit(1);
 }
 
+// Set resources
+require('./plugins/collection.js').setResources(app, rclient);
+
+// Set up fetch
+var Fetch = require('./plugins/fetch.js');
+Fetch.setRedisClient(rclient);
+
 // Setup routes
 var index = require('./routes/index')();
 var current = require('./routes/current')(app, rclient);
@@ -66,7 +73,7 @@ var notifications = require('./routes/notifications')(app, rclient);
 
 app.configure(function() {
 	// Waffles Version Info
-	app.set('wafflesVersion', '0.72');
+	app.set('wafflesVersion', '0.8');
 	
 	// Flash!
 	app.use(express.cookieParser());
@@ -118,3 +125,5 @@ http.createServer(app).listen(app.get('port'), function(){
           app.get('port'), app.get('env')
       );
 });
+
+Fetch.start();

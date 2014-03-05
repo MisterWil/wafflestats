@@ -1,4 +1,4 @@
-var models = ['./Notification.js', './History.js', './Payment.js'];
+var models = ['./Notification.js', './History.js', './Payment.js', './Address.js'];
 
 exports.initialize = function(configuration) {
     var l = models.length;

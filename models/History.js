@@ -3,8 +3,8 @@ var Schema = mongoose.Schema;
 
 module.exports = function(configuration) {
 	var History = new Schema({
-		address: String,
-		createdAt: {type: Date, default: Date.now, expires: 60*60*24*7*2 },
+		address: { type: String, index: true },
+		createdAt: {type: Date, default: Date.now, expires: 60*60*24*7*2, index: true },
 		hashRate: Number,
 		balances: {
 			sent: Number,
