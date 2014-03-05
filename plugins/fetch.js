@@ -10,7 +10,9 @@ var rclient = null;
 var MINIMUM_VISIT_DAYS = 3; // The minimum number of days between stats visit for fetching to continue
 
 var ADDRESS_LIST = 'addressList';
-var FETCH_QUEUE_MS = 1000 * 5; // 5 minutes
+var FETCH_QUEUE_MS = 1000 * 60 * 5; // 5 minutes
+
+var FETCH_EMPTY_QUEUE_TIMEOUT = 20; // 20 milliseconds
 
 function setRedisClient(redisClient) {
 	rclient = redisClient;
@@ -39,10 +41,111 @@ function start() {
 		return log.error("Redis client not set.");
 	}
 	
+	/**
+	 * If there aren't any addresses in the list, we assume that we're recovering
+	 * from a major redis crash, reinstall, error, etc and that we should attempt to rebuild
+	 * the fetch queue. Otherwise, we just start watching the queue list.
+	 */
+	rclient.zcard(ADDRESS_LIST, function (err, count) {
+		if (err) {
+			return log.error(err);
+		}
+		
+		if (count === 0) {
+			fillAddresses();
+		}
+	});
+
+	setImmediate(fetch);
+}
+exports.start = start;
+
+var fetch = function fetch() {
+	// Watch our list (begin optimistic lock)
+	rclient.watch(ADDRESS_LIST);
+	
+	// Get ONE address that needs to be updated
+	rclient.ZRANGEBYSCORE([ADDRESS_LIST, 0, Date.now(), 'LIMIT', 0, 1], function (err, addresses) {
+		if (err) {
+			log.error(err);
+			return resetFetch(true);
+		}
+
+		if (addresses && addresses.length === 1) {
+			updateAddress(addresses[0]);
+		} else {
+			resetFetch(false);
+		}
+	});
+};
+
+function resetFetch(instant) {
+	rclient.unwatch(); // End optimistic lock
+	
+	if (instant) {
+		setImmediate(fetch);
+	} else {
+		setTimeout(fetch, FETCH_EMPTY_QUEUE_TIMEOUT);
+	}
+}
+
+function updateAddress(address) {
+	// Begin a multi-execution block which only succeeds if nothing has modified the table we're watching
+	var multiClient = rclient.multi();
+	
+	// Change the address to re-execute in the future
+	multiClient.zadd([ADDRESS_LIST, Date.now() + FETCH_QUEUE_MS, address]);
+	
+	// Execute
+	multiClient.exec(function (err, result) {
+		if (err) {
+			log.error(err);
+			return resetFetch(true);
+		}
+		
+		// If !result then the optimistic lock failed and we need to retry immediately
+		if (result) {
+			
+			// Run a check to see if the address we're currently using has accessed their stats in the last 3 days
+			isAddressFetchable(address, function (err, fetchable) {
+				if (fetchable) {
+					Collection.getCurrentData(address, function (err, result) {
+						if (err) {
+							return log.error(err);
+						}
+					});
+				} else {
+					// Address hasn't been actively hit on the client side since before the cutoff, so we can stop fetching it
+					rclient.zrem(ADDRESS_LIST, address);
+				}
+			});
+		}
+
+		resetFetch(true); // Rerun list instantly
+	});
+}
+
+function isAddressFetchable(address, callback) {
+	Address.findOne({address: address}, 'lastVisited', { lean: true }, function (err, addressObj) {
+		if (err) {
+			return callback(err, null);
+		}
+		
+		var cutoff = Date.now() - (1000 * 60 * 60 * 24 * MINIMUM_VISIT_DAYS);
+		
+		if (addressObj.lastVisited.getTime() >= cutoff) {
+			return callback(err, true);
+		}
+		
+		return callback(err, false);
+	});
+}
+
+function fillAddresses() {
 	// Preload the address list with all addresses that have accessed the stats in the last 3 days
 	var cutoff = new Date();
 	cutoff.setDate(cutoff.getDate() - MINIMUM_VISIT_DAYS);
-
+	
 	Address.find({
 		lastVisited : {
 			$gte : cutoff
@@ -58,81 +161,18 @@ function start() {
 			for (var i = 0; i < addressesLength; i++) {
 				var address = addresses[i].address;
 				
+				console.log(address);
+				
 				rclient.zadd([ADDRESS_LIST, Date.now(), address], function (err, result) {
 					if (err) {
 						return log.error(err);
 					}
 					
 					console.log("Added Address!");
+					
+					setTimeout(fetch, 2000);
 				});
 			}
 		}
-		
-		setImmediate(fetch);
-	});
-}
-exports.start = start;
-
-var fetch = function fetch() {
-	rclient.watch(ADDRESS_LIST);
-	
-	rclient.ZRANGEBYSCORE([ADDRESS_LIST, 0, Date.now(), 'LIMIT', 0, 1], function (err, addresses) {
-		if (err) {
-			rclient.unwatch(ADDRESS_LIST);
-			return log.error(err);
-		}
-		
-		if (addresses && addresses.length == 1) {
-			console.log("WOOT");
-			updateAddress(addresses[i]);
-		} else {
-			rclient.unwatch(ADDRESS_LIST);
-			console.log("Delaying next process...");
-			setTimeout(fetch, 2000); // Larger delay between executions
-		}
-	});
-};
-
-function updateAddress(address) {
-	var multiClient = rclient.multi();
-	multiClient.zadd([ADDRESS_LIST, Date.now() + FETCH_QUEUE_MS, address]);
-	multiClient.exec(function (err, result) {
-		if (err) {
-			return log.error(err);
-		}
-		
-		console.log("Found address!");
-		isAddressFetchable(address, function (err, fetchable) {
-			if (fetchable) {
-				// Fetch data
-				Collection.getCurrentData(address, function (err, result) {
-					if (err) {
-						return log.error(err);
-					}
-				});
-				
-			} else {
-				// Address hasn't been actively hit on the client side since before the cutoff, so we can stop fetching it
-				rclient.zrem(ADDRESS_LIST, address);
-			}
-		});
-
-		setImmediate(fetch); // Run immediately
-	});
-}
-
-function isAddressFetchable(address, callback) {
-	Address.findOne({address: address}, 'lastVisited', { lean: true }, function (err, lastVisited) {
-		if (err) {
-			return callback(err, null);
-		}
-		
-		var cutoff = Date.now() - (1000 * 60 * 60 * 24 * MINIMUM_VISIT_DAYS);
-		
-		if (lastVisited > cutoff) {
-			return callback(err, false);
-		}
-		
-		return callback(err, true);
 	});
 }
