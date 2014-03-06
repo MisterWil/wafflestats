@@ -43,6 +43,8 @@ function getCurrentData(bitcoinAddress, callback) {
 		return callback("App or Redis Client Not Set, Server ID10T Error", null);
 	}
 	
+	console.log("Gtting here?!");
+	
 	// Check for a cached value
 	rclient.get(bitcoinAddress, function(err, result) {
 		if (result) {
