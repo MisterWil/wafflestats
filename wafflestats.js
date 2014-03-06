@@ -1,65 +1,59 @@
-// Require modules without configuration
-var flash = require('connect-flash');
-var express = require('express');
-var app = express();
-var http = require('http');
-var path = require('path');
+// Node Modules
 var fs = require('fs');
+var path = require('path');
 
-var mongoose = require('mongoose');
-
-var redis = require("redis");
-var RedisStore = require('connect-redis')(express);
-var rclient = null;
-
-// Setup configuration file
+// Load config file
 var configFile = "./configs/default.json";
 if (process.env.CONFIG !== undefined) {
 	configFile = process.env.CONFIG;
+} else {
+	console.log("Warning! Using './configs/default.json' config file.");
 }
 
-var configuration = null;
+var config = null;
 try {
-	configuration = JSON.parse(fs.readFileSync(configFile));
+	config = JSON.parse(fs.readFileSync(configFile));
 } catch (err) {
 	console.log("Err when loading config file: " + err.stack);
 	process.exit(1);
 }
 
-if (!configuration) {
-	console.log("Unable to process configuration file: " + configFile);
+if (!config) {
+	console.log("Unable to process config file: " + configFile);
 	process.exit(1);
 }
 
-// Setup models
-require('./models/models.js').initialize(configuration);
+// Express & Web Modules
+var express = require('express');
+var app = express();
+var http = require('http');
+var flash = require('connect-flash');
 
-// Setup AWS
-require('./plugins/notifications.js').setAwsConfig(configuration.aws);
+// Mongoose (MongoDB)
+var mongoose = require('mongoose');
+mongoose.connect(config.mongo.address);
 
-// Set up specific environments
-app.configure('development', function() {
-    app.use(express.logger('dev'));
+// Setup Mongoose Models
+require('./models/models.js').initialize(config);
+
+// Redis
+var redis = require("redis");
+var RedisStore = require('connect-redis')(express);
+var rclient = redis.createClient(config.redis.port, config.redis.address);
+
+// Pass config to notifications for AWS setup
+require('./plugins/notifications.js').setAwsConfig(config.aws);
+
+if ('development' == app.get('env')) {
+	app.use(express.logger('dev'));
 	app.use(express.errorHandler());
 	app.locals.pretty = true;
-	mongoose.connect(configuration.development.mongo.address);
-	rclient = redis.createClient(configuration.development.redis.port, configuration.development.redis.address);
-});
-
-app.configure('production', function() {
-	mongoose.connect(configuration.production.mongo.address);
-	rclient = redis.createClient(configuration.production.redis.port, configuration.production.redis.address);
-});
-
-if (!rclient) {
-	console.log("Redis client not found...");
-	process.exit(1);
 }
 
-// Set resources
+// Set resources for collection
 require('./plugins/collection.js').setResources(app, rclient);
 
-// Set up fetch
+// Fetch plugin
 var Fetch = require('./plugins/fetch.js');
 Fetch.setRedisClient(rclient);
 
@@ -68,30 +62,27 @@ var index = require('./routes/index')();
 var current = require('./routes/current')(app, rclient);
 var historical = require('./routes/historical')(app, rclient);
 var metrics = require('./routes/metrics')(app, rclient);
-
 var notifications = require('./routes/notifications')(app, rclient);
 
-app.configure(function() {
-	// Waffles Version Info
-	app.set('wafflesVersion', '0.8');
-	
-	// Flash!
-	app.use(express.cookieParser());
-    //app.use(express.session({ store: new RedisStore({ client: rclient }), secret: configuration.hashid }));
-    app.use(express.session({secret: configuration.hashid}));
-    app.use(flash());
+// Waffles Version Info
+app.set('wafflesVersion', '0.8');
 
-	// all environments
-	app.set('port', process.env.PORT || 3000);
-	app.set('views', path.join(__dirname, 'views'));
-	app.set('view engine', 'jade');
-	app.use(express.favicon());
-	app.use(express.json());
-	app.use(express.urlencoded());
-	app.use(express.methodOverride());
-	app.use(app.router);
-	app.use(express.static(path.join(__dirname, 'public')));
-});
+// Flash!
+app.use(express.cookieParser());
+app.use(express.session({ store: new RedisStore({ client: rclient }), secret: config.hashid }));
+//app.use(express.session({secret: config.hashid}));
+app.use(flash());
+
+// all environments
+app.set('port', process.env.PORT || 3000);
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+app.use(express.favicon());
+app.use(express.json());
+app.use(express.urlencoded());
+app.use(express.methodOverride());
+app.use(app.router);
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Setup routes
 app.get('/', index.get);
@@ -120,6 +111,7 @@ app.get('/metrics', metrics.get);
 app.get('/temp-api/:address', current.temp_api);
 app.get('/historical/:address', historical.get);
 
+// Create the server
 http.createServer(app).listen(app.get('port'), function(){
   console.log(
           'Express server listening on port %d within %s environment',
@@ -127,4 +119,5 @@ http.createServer(app).listen(app.get('port'), function(){
       );
 });
 
+// Start background fetching
 Fetch.start();

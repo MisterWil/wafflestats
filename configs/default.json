@@ -1,5 +1,6 @@
 {
 	"port" : 3000,
+	
 	"hashid" : "correcthorsebatterystaple",
 	
 	"aws": {
@@ -8,25 +9,12 @@
 	    "region": "us-west-2"
 	},
 	
-	"development" : {
-		"redis" : {
-			"address": "localhost",
-			"port": 6397
-		},
-		
-		"mongo" : {
-			"address": "mongodb://localhost/waffles-dev"
-		}
+	"redis" : {
+		"address": "localhost",
+		"port": 6397
 	},
 	
-	"production" : {
-		"redis" : {
-			"address": "localhost",
-			"port": 6397
-		},
-		
-		"mongo" : {
-			"address": "mongodb://localhost/waffles-dev"
-		}
+	"mongo" : {
+		"address": "mongodb://localhost/waffles-dev"
 	}
 }
