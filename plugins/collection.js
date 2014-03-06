@@ -71,7 +71,6 @@ function getCurrentDataFromAPI(bitcoinAddress, callback) {
 		if (!error && response.statusCode == 200) {
 		    processAPIData(bitcoinAddress, body, callback);
 		} else {
-		    log.error(error);
 		    callback("Remote API Unreachable", null);
 		}
 	});
