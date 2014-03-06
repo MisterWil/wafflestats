@@ -27,6 +27,8 @@ exports.getJSON = function(options, onResult, onError)
     req.on('error', function(err) {
         onError(err);
     });
+    
+    req.setTimeout(1000*30); // 30 seconds
 
     req.end();
 };
