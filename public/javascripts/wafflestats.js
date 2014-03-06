@@ -13,8 +13,10 @@ var LOADING = {
 var HISTORICAL_DATA = {
 		hashRate : [],
 		sent : [],
+		unsent : [],
 		confirmed : [],
-		unconverted : []
+		unconverted : [],
+		payments: []
 };
 
 var CURRENT_DATA = {
@@ -44,7 +46,9 @@ var SHOWING = {
 		BALANCES : {
 			confirmed: true,
 			unconverted: true,
-			sent: false
+			unsent: true,
+			sent: false,
+			payments: true
 		}
 };
 
@@ -134,7 +138,7 @@ var lineChartDefaults = {
         	min: 0
         },
         legend: {
-            enabled: false
+            enabled: true
         }
 };
 
@@ -180,6 +184,15 @@ var historicalBalanceLineChart = {
         name: 'Unconverted',
         data: [],
         color: 'rgba(255, 165, 61, 1)',
+        marker: {
+        	symbol: 'circle',
+        	radius: 2
+        }
+    },
+    {
+        name: 'Unsent',
+        data: [],
+        color: 'rgba(61, 61, 61, 1)',
         marker: {
         	symbol: 'circle',
         	radius: 2
@@ -318,8 +331,14 @@ function initControls() {
 	if (SHOWING.BALANCES.unconverted) {
 		$('#visibility_balances label[value="unconverted"]').button('toggle');
 	}
+	if (SHOWING.BALANCES.unsent) {
+		$('#visibility_balances label[value="unsent"]').button('toggle');
+	}
 	if (SHOWING.BALANCES.sent) {
 		$('#visibility_balances label[value="sent"]').button('toggle');
+	}
+	if (SHOWING.BALANCES.payments) {
+		$('#visibility_balances label[value="payments"]').button('toggle');
 	}
 	
 	$('#visibility_balances label').click(function (e) {
@@ -435,7 +454,9 @@ function updateBalancesHistory() {
 function updateBalancesVisibility() {
 	GRAPHS.historicalBalances.series[0].setVisible(SHOWING.BALANCES.confirmed);
 	GRAPHS.historicalBalances.series[1].setVisible(SHOWING.BALANCES.unconverted);
-	GRAPHS.historicalBalances.series[2].setVisible(SHOWING.BALANCES.sent);
+	GRAPHS.historicalBalances.series[2].setVisible(SHOWING.BALANCES.unsent);
+	GRAPHS.historicalBalances.series[3].setVisible(SHOWING.BALANCES.sent);
+	//GRAPHS.historicalBalances.series[4].setVisible(SHOWING.BALANCES.payments);
 }
 
 function enableTimeScaleButtons(id) {
@@ -512,6 +533,7 @@ function processHistoricalBalances(history) {
 		}
 		
 		HISTORICAL_DATA.sent.push([ date.getTime(), data.balances.sent ]);
+		HISTORICAL_DATA.unsent.push([ date.getTime(), data.balances.confirmed + data.balances.unconverted ]);
 		HISTORICAL_DATA.confirmed.push([ date.getTime(), data.balances.confirmed ]);
 		HISTORICAL_DATA.unconverted.push([ date.getTime(), data.balances.unconverted ]);
 	}
@@ -529,8 +551,10 @@ function clearHistoricalBalances() {
 	//DATA_RANGE.BALANCES.lastValue = new Date();
 	
 	HISTORICAL_DATA.sent = [];
+	HISTORICAL_DATA.unsent = [];
 	HISTORICAL_DATA.confirmed = [];
 	HISTORICAL_DATA.unconverted = [];
+	HISTORICAL_DATA.payments = [];
 }
 
 function doUpdate() {
@@ -640,7 +664,9 @@ function replotHistoricalGraph() {
 function replotBalanceGraph() {
 	GRAPHS.historicalBalances.series[0].setData(HISTORICAL_DATA.confirmed, false);
 	GRAPHS.historicalBalances.series[1].setData(HISTORICAL_DATA.unconverted, false);
-	GRAPHS.historicalBalances.series[2].setData(HISTORICAL_DATA.sent, false);
+	GRAPHS.historicalBalances.series[2].setData(HISTORICAL_DATA.unsent, false);
+	GRAPHS.historicalBalances.series[3].setData(HISTORICAL_DATA.sent, false);
+	//GRAPHS.historicalBalances.series[4].setData(HISTORICAL_DATA.payments, false);
 	GRAPHS.historicalBalances.redraw();
 }
 
