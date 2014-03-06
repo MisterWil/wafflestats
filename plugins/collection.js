@@ -109,7 +109,7 @@ function processAPIData(bitcoinAddress, result, callback) {
 
 function cacheResult(address, result) {
 	rclient.set(address, JSON.stringify(result));
-	rclient.expire(address, expireSeconds);
+	rclient.expire(address, CURRENT_DATA_EXPIRE_SECONDS);
 }
 
 function saveHistorical(address, data) {
