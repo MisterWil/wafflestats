@@ -78,7 +78,7 @@ app.configure(function() {
 	// Flash!
 	app.use(express.cookieParser());
     //app.use(express.session({ store: new RedisStore({ client: rclient }), secret: configuration.hashid }));
-    app.use(express.session());
+    app.use(express.session({secret: "configuration.hashid"}));
     app.use(flash());
 
 	// all environments
