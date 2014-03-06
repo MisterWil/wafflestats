@@ -74,18 +74,6 @@ function getCurrentDataFromAPI(bitcoinAddress, callback) {
 		    callback("Remote API Unreachable", null);
 		}
 	});
-	
-	req.on('end', function() {
-	    callback("Remote API Unreachable", null);
-	});
-	
-	req.on('close', function() {
-        callback("Remote API Unreachable", null);
-    });
-	
-	req.on('error', function() {
-        callback("Remote API Unreachable", null);
-    });
 }
 exports.getCurrentDataFromAPI = getCurrentDataFromAPI;
 
