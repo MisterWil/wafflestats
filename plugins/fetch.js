@@ -115,7 +115,8 @@ function updateAddress(address) {
 				if (fetchable) {
 					Collection.getCurrentData(address, function (err, result) {
 						if (err) {
-							return log.error("FETCH: " + err);
+						    // TODO: Better error handling!
+							return;
 						}
 					});
 				} else {
