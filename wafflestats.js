@@ -37,27 +37,6 @@ require('./models/models.js').initialize(configuration);
 // Setup AWS
 require('./plugins/notifications.js').setAwsConfig(configuration.aws);
 
-app.configure(function() {
-    // Waffles Version Info
-    app.set('wafflesVersion', '0.8');
-    
-    // Flash!
-    app.use(express.cookieParser());
-    app.use(express.session({ store: new RedisStore({ client: rclient }), secret: configuration.hashid }))
-    app.use(flash());
-
-    // all environments
-    app.set('port', process.env.PORT || 3000);
-    app.set('views', path.join(__dirname, 'views'));
-    app.set('view engine', 'jade');
-    app.use(express.favicon());
-    app.use(express.json());
-    app.use(express.urlencoded());
-    app.use(express.methodOverride());
-    app.use(app.router);
-    app.use(express.static(path.join(__dirname, 'public')));
-});
-
 // Set up specific environments
 app.configure('development', function() {
     app.use(express.logger('dev'));
@@ -67,10 +46,7 @@ app.configure('development', function() {
 	rclient = redis.createClient(configuration.development.redis.port, configuration.development.redis.address);
 });
 
-app.configure('production', function() {
-	mongoose.connect(configuration.production.mongo.address);
-	rclient = redis.createClient(configuration.production.redis.port, configuration.production.redis.address);
-});
+rclient = redis.createClient(configuration.production.redis.port, configuration.production.redis.address);
 
 if (!rclient) {
 	console.log("Redis client not found...");
@@ -91,6 +67,31 @@ var historical = require('./routes/historical')(app, rclient);
 var metrics = require('./routes/metrics')(app, rclient);
 
 var notifications = require('./routes/notifications')(app, rclient);
+
+app.configure(function() {
+	// Waffles Version Info
+	app.set('wafflesVersion', '0.8');
+	
+	// Flash!
+	app.use(express.cookieParser());
+    app.use(express.session({ store: new RedisStore({ client: rclient }), secret: configuration.hashid }))
+    app.use(flash());
+
+	// all environments
+	app.set('port', process.env.PORT || 3000);
+	app.set('views', path.join(__dirname, 'views'));
+	app.set('view engine', 'jade');
+	app.use(express.favicon());
+	app.use(express.json());
+	app.use(express.urlencoded());
+	app.use(express.methodOverride());
+	app.use(app.router);
+	app.use(express.static(path.join(__dirname, 'public')));
+});
+
+app.configure('production', function() {
+    mongoose.connect(configuration.production.mongo.address);
+});
 
 // Setup routes
 app.get('/', index.get);
