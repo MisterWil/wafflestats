@@ -46,7 +46,10 @@ app.configure('development', function() {
 	rclient = redis.createClient(configuration.development.redis.port, configuration.development.redis.address);
 });
 
-rclient = redis.createClient(configuration.production.redis.port, configuration.production.redis.address);
+app.configure('production', function() {
+	mongoose.connect(configuration.production.mongo.address);
+	rclient = redis.createClient(configuration.production.redis.port, configuration.production.redis.address);
+});
 
 if (!rclient) {
 	console.log("Redis client not found...");
@@ -74,7 +77,8 @@ app.configure(function() {
 	
 	// Flash!
 	app.use(express.cookieParser());
-    app.use(express.session({ store: new RedisStore({ client: rclient }), secret: configuration.hashid }))
+    //app.use(express.session({ store: new RedisStore({ client: rclient }), secret: configuration.hashid }));
+    app.use(express.session());
     app.use(flash());
 
 	// all environments
@@ -87,10 +91,6 @@ app.configure(function() {
 	app.use(express.methodOverride());
 	app.use(app.router);
 	app.use(express.static(path.join(__dirname, 'public')));
-});
-
-app.configure('production', function() {
-    mongoose.connect(configuration.production.mongo.address);
 });
 
 // Setup routes

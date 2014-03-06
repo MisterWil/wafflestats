@@ -67,7 +67,7 @@ function getCurrentDataFromAPI(bitcoinAddress, callback) {
 	
 	options.uri = options.host + options.apiPath + '?address=' + bitcoinAddress;
 
-	request(options, function(error, response, body) {
+	var req = request(options, function(error, response, body) {
 		if (!error && response.statusCode == 200) {
 		    processAPIData(bitcoinAddress, body, callback);
 		} else {
@@ -75,6 +75,18 @@ function getCurrentDataFromAPI(bitcoinAddress, callback) {
 		    callback("Remote API Unreachable", null);
 		}
 	});
+	
+	req.on('end', function() {
+	    callback("Remote API Unreachable", null);
+	});
+	
+	req.on('close', function() {
+        callback("Remote API Unreachable", null);
+    });
+	
+	req.on('error', function() {
+        callback("Remote API Unreachable", null);
+    });
 }
 exports.getCurrentDataFromAPI = getCurrentDataFromAPI;
 
