@@ -137,7 +137,7 @@ function isAddressFetchable(address, callback) {
 		
 		var cutoff = Date.now() - (1000 * 60 * 60 * 24 * MINIMUM_VISIT_DAYS);
 		
-		if (addressObj.lastVisited.getTime() >= cutoff) {
+		if (addressObj && addressObj.lastVisited.getTime() >= cutoff) {
 			return callback(err, true);
 		}
 		
