@@ -72,7 +72,7 @@ function getCurrentDataFromAPI(bitcoinAddress, callback) {
 	rest.getJSON(options, function(statusCode, result) {
 		result.statusCode = statusCode;
 
-		if (statusCode == 200) {
+		if (result) {
 			processAPIData(bitcoinAddress, result, callback);
 		} else {
 			callback("Remote API Unreachable", null);
