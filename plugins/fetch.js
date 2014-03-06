@@ -29,7 +29,11 @@ function resetAddress(bitcoinAddress) {
 		return log.error("Redis client not set.");
 	}
 	
-	rclient.zadd([ADDRESS_LIST, Date.now() + FETCH_QUEUE_MS, bitcoinAddress]);
+	rclient.zadd([ADDRESS_LIST, Date.now(), bitcoinAddress], function (err, result) {
+		if (err) {
+			return log.error(err);
+		}
+	});
 }
 exports.resetAddress = resetAddress;
 
