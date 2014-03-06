@@ -1,4 +1,4 @@
-var rest = require('./rest');
+var rest = require('rest');
 var log = require('../log');
 var extend = require("xtend");
 
