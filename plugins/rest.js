@@ -28,7 +28,11 @@ exports.getJSON = function(options, onResult, onError)
         onError(err);
     });
     
-    req.setTimeout(1000*30); // 30 seconds
+    req.setTimeout(1000*30, function() {
+        req.end();
+        console.log("connection ended");
+        onError('Remote Call Timed Out');
+    });
 
     req.end();
 };
