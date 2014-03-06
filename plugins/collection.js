@@ -71,7 +71,8 @@ function getCurrentDataFromAPI(bitcoinAddress, callback) {
 
 	rest.getJSON(options, function(statusCode, result) {
 		//result.statusCode = statusCode;
-
+	    console.log("getting here");
+	    
 		if (result) {
 			processAPIData(bitcoinAddress, result, callback);
 		} else {
