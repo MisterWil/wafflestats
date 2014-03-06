@@ -1,4 +1,4 @@
-var rest = require('./rest');
+var request = require('request');
 var log = require('../log');
 var extend = require("xtend");
 
@@ -10,14 +10,12 @@ var Notifications = require('./notifications.js');
 var app = null;
 var rclient = null;
 
-var options = {
-	host : 'wafflepool.com',
-	port : 80,
+var uri = {
+	host : 'http://wafflepool.com',
+	method: "GET",
+	timeout: 10000,
 	apiPath : '/tmp_api',
-	method : 'GET',
-	headers : {
-		'Content-Type' : 'application/json'
-	}
+	json: true
 };
 
 /*
@@ -67,18 +65,15 @@ function getCurrentDataFromAPI(bitcoinAddress, callback) {
 		return callback("App or Redis Client Not Set, Server ID10T Error", null);
 	}
 	
-	options.path = options.apiPath + '?address=' + bitcoinAddress;
+	options.uri = options.host + options.apiPath + '?address=' + bitcoinAddress;
 
-	rest.getJSON(options, function(statusCode, result) {
-		//result.statusCode = statusCode;
-	    
-		if (result) {
-			processAPIData(bitcoinAddress, result, callback);
+	request(options, function(error, response, body) {
+		if (!error && response.statusCode == 200) {
+		    processAPIData(bitcoinAddress, body, callback);
 		} else {
-			callback("Remote API Unreachable", null);
+		    log.error(error);
+		    callback("Remote API Unreachable", null);
 		}
-	}, function(err) {
-		callback(err, null);
 	});
 }
 exports.getCurrentDataFromAPI = getCurrentDataFromAPI;
