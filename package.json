@@ -17,6 +17,7 @@
     "connect-flash": "*",
     "hashids": "0.3.3",
     "sprintf": "*",
-    "connect-redis" : "1.4.x"
+    "connect-redis" : "1.4.x",
+    "request" : "*"
   }
 }
