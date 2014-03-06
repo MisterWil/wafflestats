@@ -17,7 +17,7 @@ module.exports = function(app, rclient) {
 			// address
 			Fetch.resetAddress(req.params.address);
 
-			// Update the address field with the current date
+/*			// Update the address field with the current date
 			Address.update({
 				address : req.params.address
 			}, {
@@ -35,7 +35,7 @@ module.exports = function(app, rclient) {
 				if (err) {
 					return log.error(err);
 				}
-			});
+			});*/
 
 			Collection.getCurrentData(req.params.address,
 					function(err, result) {

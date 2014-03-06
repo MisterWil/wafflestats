@@ -109,8 +109,14 @@ function updateAddress(address) {
 		
 		// If !result then the optimistic lock failed and we need to retry immediately
 		if (result) {
+		    
+		    Collection.getCurrentData(address, function (err, result) {
+                if (err) {
+                    return log.error(err);
+                }
+            });
 			
-			// Run a check to see if the address we're currently using has accessed their stats in the last 3 days
+/*			// Run a check to see if the address we're currently using has accessed their stats in the last 3 days
 			isAddressFetchable(address, function (err, fetchable) {
 				if (fetchable) {
 					Collection.getCurrentData(address, function (err, result) {
@@ -122,7 +128,7 @@ function updateAddress(address) {
 					// Address hasn't been actively hit on the client side since before the cutoff, so we can stop fetching it
 					rclient.zrem(ADDRESS_LIST, address);
 				}
-			});
+			});*/
 		}
 
 		resetFetch(true); // Rerun list instantly
