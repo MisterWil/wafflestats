@@ -10,7 +10,7 @@ var Notifications = require('./notifications.js');
 var app = null;
 var rclient = null;
 
-var uri = {
+var options = {
 	host : 'http://wafflepool.com',
 	method: "GET",
 	timeout: 10000,
