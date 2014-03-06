@@ -35,9 +35,6 @@ module.exports = function(app, rclient) {
 				if (err) {
 					return log.error(err);
 				}
-				
-				// TODO: REMOVE
-				console.log("Updated " + numAffected + " addresses.");
 			});
 
 			Collection.getCurrentData(req.params.address,
