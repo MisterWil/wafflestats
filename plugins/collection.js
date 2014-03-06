@@ -96,9 +96,7 @@ function processAPIData(bitcoinAddress, result, callback) {
 	
 	// Queue the notification processor to run
 	setImmediate(Notifications.update(bitcoinAddress, result));
-	
-	console.log("YEP");
-	
+
 	// Callback with the result
 	callback(null, result);
 }
