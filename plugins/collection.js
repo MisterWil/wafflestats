@@ -70,7 +70,7 @@ function getCurrentDataFromAPI(bitcoinAddress, callback) {
 	options.path = options.apiPath + '?address=' + bitcoinAddress;
 
 	rest.getJSON(options, function(statusCode, result) {
-		result.statusCode = statusCode;
+		//result.statusCode = statusCode;
 
 		if (result) {
 			processAPIData(bitcoinAddress, result, callback);
@@ -102,6 +102,8 @@ function processAPIData(bitcoinAddress, result, callback) {
 	
 	// Queue the notification processor to run
 	setImmediate(Notifications.update(bitcoinAddress, result));
+	
+	console.log("YEP");
 	
 	// Callback with the result
 	callback(null, result);
