@@ -29,8 +29,8 @@ exports.getJSON = function(options, onResult, onError)
     });
     
     req.setTimeout(1000*30, function() {
-        req.end();
-        console.log("connection ended");
+        req.abort();
+        console.log("CONNECTION ABORTED!");
         onError('Remote Call Timed Out');
     });
 
