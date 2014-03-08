@@ -27,11 +27,29 @@ mixin timeScale(name)
     button.btn.btn-primary.btn-xs.largeRange(style="display:none;" id="range_#{name}_2wk", value="2wk") 2 wk
       
 block header
-  form.navbar-form.navbar-left.hidden-xs.hidden-sm(role="address", name="stats", action="/stats", method="get")
-      .form-group
-        input.form-control(type="text", placeholder="Bitcoin Address", size="45", name="address", id="btcAddress")
-      button.btn.btn-success(type="submit")
-        i.fa.fa-refresh.fa-lg
+  .nav.navbag-nav.navbar-left
+    ul.nav.navbar-nav
+      li.active
+        a.summaryTab(href="#summary", data-toggle="tab")
+          i.fa.fa-info.fa-lg &nbsp;
+          | Summary
+      li
+        a.detailsTab(href="#details", data-toggle="tab")
+          i.fa.fa-bars.fa-lg &nbsp;
+          | Details
+      li
+        a.chartsTab(href="#charts", data-toggle="tab")
+          i.fa.fa-bar-chart-o.fa-lg &nbsp;
+          | Charts
+      li.dropdown
+        a.dropdown-toggle(href="#", data-toggle="dropdown")
+          | Color Mode&nbsp;
+          i.caret
+        ul.dropdown-menu
+          li
+            a.theme-link(href="#", data-theme="daytime") Daytime
+          li
+            a.theme-link(href="#", data-theme="nighttime") Nighttime
   .nav.navbar-nav.navbar-right
       ul.nav.navbar-nav
         li
@@ -45,83 +63,21 @@ block header
 
 block content
   .container-fluid
-    .alert.alert-info.alert-dismissable
+    .alert.alert-warning.alert-dismissable
       button.close(type="button", data-dismiss="alert", aria-hidden="true") &times;
       i.fa.fa-heart.fa-lg &nbsp;
       strong Love WAFFLEStats? Please, show it by donating bitcoins! Donate to: 1Pr87ypYdG8eMTNUXR4rT1q2P1VJ7yu1b5
-      
+  
   .container-fluid
-    .row
-      .col-md-2.text-center.nowrap
-        h3 Current Balances
-        br
-        table.table.table-hover
-          tr.warning
-            th Unconverted
-          tr
-            td.nowrap.text-left
-              i.fa.fa-btc &nbsp;
-              span#unconverted 0.00000000
-          tr.info
-            th Confirmed
-          tr
-            td.nowrap.text-left
-              i.fa.fa-btc &nbsp;
-              span#confirmed 0.00000000
-          tr.active
-            th Unsent
-          tr
-            td.nowrap.text-left
-              i.fa.fa-btc &nbsp;
-              span#unsent 0.00000000
-          tr
-            td
-          tr.success
-            th Sent
-          tr
-            td.nowrap.text-left
-              i.fa.fa-btc &nbsp;
-              span#sent 0.00000000
-      .col-md-10.text-center
-        .container-fluid
-          .row
-            .col-sm-12
-              h3 Historical Balance
-          .row
-            .col-sm-12
-              .text-left.pull-left
-                +visibility("balances", ['confirmed', 'unconverted', 'unsent', 'sent'])
-              .text-right.pull-right
-                +timeScale("balances")
-          .row
-            .col-sm-12
-              #historicalBalances.graph
-    .row
-      .col-md-2.text-center.nowrap
-        h3 Current Hashrate
-        h2.well
-          span#hashrate 0.00
-        div#khs.text-right
-          h4.text-muted
-            abbr(title="kilohashes per second") kH/s
-        table.table.table-hover.pull-right
-          tr.text-muted.active
-            th Minimum
-          tr.text-muted
-            td.nowrap.text-left#minimumHR 0 kH/s
-          tr.text-muted.active
-            th Average
-          tr.text-muted
-            td.nowrap.text-left#averageHR 0 kH/s
-          tr.text-muted.active
-            th Maximum
-          tr.text-muted
-            td.nowrap.text-left#maximumHR 0 kH/s
-      .col-md-10.text-center.fixed-fluid
-        h3 Historical Hashrate
-        .timeScale.text-right
-          +timeScale("hashrate")
-        #historalHashrate.graph
+    .tab-content
+      #summary.tab-pane.active.fade.in
+        include summary
+        
+      #details.tab-pane.fade
+        strong DETAILS HERE
+        
+      #charts.tab-pane.fade
+        include charts
         
 block scripts
   script(src='/javascripts/wafflestats.js')

@@ -152,7 +152,7 @@ var historicalHashrateLineChart = {
         series: [{
             name: 'Hashrate',
             data: [],
-            color: 'rgba(255, 61, 61, 1)',
+            color: '#ff3333',
             marker: {
             	symbol: 'circle',
             	radius: 2
@@ -171,19 +171,20 @@ var historicalBalanceLineChart = {
             text: 'btc'
         }
     },
-    series: [{
-        name: 'Confirmed',
+    series: [
+    {
+        name: 'Unconverted',
         data: [],
-        color: 'rgba(61, 61, 255, 1)',
+        color: '#a6bddb',
         marker: {
         	symbol: 'circle',
         	radius: 2
         }
     },
     {
-        name: 'Unconverted',
+        name: 'Confirmed',
         data: [],
-        color: 'rgba(255, 165, 61, 1)',
+        color: '#74a9cf',
         marker: {
         	symbol: 'circle',
         	radius: 2
@@ -192,7 +193,7 @@ var historicalBalanceLineChart = {
     {
         name: 'Unsent',
         data: [],
-        color: 'rgba(61, 61, 61, 1)',
+        color: '#2b8cbe',
         marker: {
         	symbol: 'circle',
         	radius: 2
@@ -201,7 +202,7 @@ var historicalBalanceLineChart = {
     {
         name: 'Sent',
         data: [],
-        color: 'rgba(61, 255, 61, 1)',
+        color: '#045a8d',
         marker: {
         	symbol: 'circle',
         	radius: 2
@@ -213,6 +214,19 @@ var historicalBalanceLineChart = {
         valueDecimals: 8
     }
 };
+
+var THEMES = {
+	"daytime" : {
+		css: "//netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap.min.css",
+		charts: {}
+	},
+	"nighttime" : {
+		css: "//netdna.bootstrapcdn.com/bootswatch/3.1.1/slate/bootstrap.min.css",
+		charts: {}
+	}
+};
+
+var currentTheme = "daytime";
 
 // Disable caching of AJAX responses, hopefully fixes IE?
 $.ajaxSetup({
@@ -272,6 +286,24 @@ function setDefaults() {
 }
 
 function initControls() {
+	$('.chartsTab').click(function() {
+		setTimeout(function() {
+			reflowGraphs();
+		}, 200);
+	});
+
+	$('.theme-link').click(function() {
+		currentTheme = $(this).attr('data-theme');
+		
+		var themeurl = THEMES[currentTheme].css;
+		$('#theme').attr('href', themeurl);
+
+		initGraphs();
+		updateBalancesVisibility();
+		replotHistoricalGraph();
+		replotBalanceGraph();
+	});
+	
 	$('#resolution_hashrate button').click(function (e) {
 		if (LOADING.hashRate === STATES.READY) {
 			var value = $(this).val();
@@ -351,12 +383,20 @@ function initControls() {
 }
 
 function initGraphs() {
-	// Create hashrate graph
-	$('#historalHashrate').highcharts($.extend(true, {}, lineChartDefaults, historicalHashrateLineChart));
-	GRAPHS.historicalHashrate = $('#historalHashrate').highcharts();
+	if (GRAPHS.historicalHashrate) {
+		GRAPHS.historicalHashrate.destroy();
+	}
+	
+	if (GRAPHS.historicalBalances) {
+		GRAPHS.historicalBalances.destroy();
+	}
 
+	// Create hashrate graph
+	$('#historalHashrate').highcharts($.extend(true, {}, THEMES[currentTheme].charts, lineChartDefaults, historicalHashrateLineChart));
+	GRAPHS.historicalHashrate = $('#historalHashrate').highcharts();
+	
 	// Create balances graph
-	$('#historicalBalances').highcharts($.extend(true, {}, lineChartDefaults, historicalBalanceLineChart));
+	$('#historicalBalances').highcharts($.extend(true, {}, THEMES[currentTheme].charts, lineChartDefaults, historicalBalanceLineChart));
 	GRAPHS.historicalBalances = $('#historicalBalances').highcharts();
 };
 
@@ -452,8 +492,8 @@ function updateBalancesHistory() {
 }
 
 function updateBalancesVisibility() {
-	GRAPHS.historicalBalances.series[0].setVisible(SHOWING.BALANCES.confirmed);
-	GRAPHS.historicalBalances.series[1].setVisible(SHOWING.BALANCES.unconverted);
+	GRAPHS.historicalBalances.series[0].setVisible(SHOWING.BALANCES.unconverted);
+	GRAPHS.historicalBalances.series[1].setVisible(SHOWING.BALANCES.confirmed);
 	GRAPHS.historicalBalances.series[2].setVisible(SHOWING.BALANCES.unsent);
 	GRAPHS.historicalBalances.series[3].setVisible(SHOWING.BALANCES.sent);
 	//GRAPHS.historicalBalances.series[4].setVisible(SHOWING.BALANCES.payments);
@@ -662,8 +702,8 @@ function replotHistoricalGraph() {
 }
 
 function replotBalanceGraph() {
-	GRAPHS.historicalBalances.series[0].setData(HISTORICAL_DATA.confirmed, false);
-	GRAPHS.historicalBalances.series[1].setData(HISTORICAL_DATA.unconverted, false);
+	GRAPHS.historicalBalances.series[0].setData(HISTORICAL_DATA.unconverted, false);
+	GRAPHS.historicalBalances.series[1].setData(HISTORICAL_DATA.confirmed, false);
 	GRAPHS.historicalBalances.series[2].setData(HISTORICAL_DATA.unsent, false);
 	GRAPHS.historicalBalances.series[3].setData(HISTORICAL_DATA.sent, false);
 	//GRAPHS.historicalBalances.series[4].setData(HISTORICAL_DATA.payments, false);
@@ -853,4 +893,264 @@ $.extend({
 
 Array.prototype.last = function() {
 	return this[this.length - 1];
+};
+
+THEMES["nighttime"].charts = {
+	colors : [ "#DDDF0D", "#7798BF", "#55BF3B", "#DF5353", "#aaeeee",
+			"#ff0066", "#eeaaee", "#55BF3B", "#DF5353", "#7798BF", "#aaeeee" ],
+	chart : {
+		backgroundColor : '#272b30',
+		borderWidth : 0,
+		borderRadius : 0,
+		plotBackgroundColor : null,
+		plotShadow : false,
+		plotBorderWidth : 0
+	},
+	title : {
+		style : {
+			color : '#FFF',
+			font : '16px Lucida Grande, Lucida Sans Unicode, Verdana, Arial, Helvetica, sans-serif'
+		}
+	},
+	subtitle : {
+		style : {
+			color : '#DDD',
+			font : '12px Lucida Grande, Lucida Sans Unicode, Verdana, Arial, Helvetica, sans-serif'
+		}
+	},
+	xAxis : {
+		gridLineWidth : 0,
+		lineColor : '#999',
+		tickColor : '#999',
+		labels : {
+			style : {
+				color : '#999',
+				fontWeight : 'bold'
+			}
+		},
+		title : {
+			style : {
+				color : '#AAA',
+				font : 'bold 12px Lucida Grande, Lucida Sans Unicode, Verdana, Arial, Helvetica, sans-serif'
+			}
+		}
+	},
+	yAxis : {
+		alternateGridColor : null,
+		minorTickInterval : null,
+		gridLineColor : 'rgba(255, 255, 255, .1)',
+		minorGridLineColor : 'rgba(255,255,255,0.07)',
+		lineWidth : 0,
+		tickWidth : 0,
+		labels : {
+			style : {
+				color : '#999',
+				fontWeight : 'bold'
+			}
+		},
+		title : {
+			style : {
+				color : '#AAA',
+				font : 'bold 12px Lucida Grande, Lucida Sans Unicode, Verdana, Arial, Helvetica, sans-serif'
+			}
+		}
+	},
+	legend : {
+		itemStyle : {
+			color : '#CCC'
+		},
+		itemHoverStyle : {
+			color : '#FFF'
+		},
+		itemHiddenStyle : {
+			color : '#333'
+		}
+	},
+	labels : {
+		style : {
+			color : '#CCC'
+		}
+	},
+	tooltip : {
+		backgroundColor : {
+			linearGradient : {
+				x1 : 0,
+				y1 : 0,
+				x2 : 0,
+				y2 : 1
+			},
+			stops : [ [ 0, 'rgba(96, 96, 96, .8)' ],
+					[ 1, 'rgba(16, 16, 16, .8)' ] ]
+		},
+		borderWidth : 0,
+		style : {
+			color : '#FFF'
+		}
+	},
+
+	plotOptions : {
+		series : {
+			nullColor : '#444444'
+		},
+		line : {
+			dataLabels : {
+				color : '#CCC'
+			},
+			marker : {
+				lineColor : '#333'
+			}
+		},
+		spline : {
+			marker : {
+				lineColor : '#333'
+			}
+		},
+		scatter : {
+			marker : {
+				lineColor : '#333'
+			}
+		},
+		candlestick : {
+			lineColor : 'white'
+		}
+	},
+
+	toolbar : {
+		itemStyle : {
+			color : '#CCC'
+		}
+	},
+
+	navigation : {
+		buttonOptions : {
+			symbolStroke : '#DDDDDD',
+			hoverSymbolStroke : '#FFFFFF',
+			theme : {
+				fill : {
+					linearGradient : {
+						x1 : 0,
+						y1 : 0,
+						x2 : 0,
+						y2 : 1
+					},
+					stops : [ [ 0.4, '#606060' ], [ 0.6, '#333333' ] ]
+				},
+				stroke : '#000000'
+			}
+		}
+	},
+
+	// scroll charts
+	rangeSelector : {
+		buttonTheme : {
+			fill : {
+				linearGradient : {
+					x1 : 0,
+					y1 : 0,
+					x2 : 0,
+					y2 : 1
+				},
+				stops : [ [ 0.4, '#888' ], [ 0.6, '#555' ] ]
+			},
+			stroke : '#000000',
+			style : {
+				color : '#CCC',
+				fontWeight : 'bold'
+			},
+			states : {
+				hover : {
+					fill : {
+						linearGradient : {
+							x1 : 0,
+							y1 : 0,
+							x2 : 0,
+							y2 : 1
+						},
+						stops : [ [ 0.4, '#BBB' ], [ 0.6, '#888' ] ]
+					},
+					stroke : '#000000',
+					style : {
+						color : 'white'
+					}
+				},
+				select : {
+					fill : {
+						linearGradient : {
+							x1 : 0,
+							y1 : 0,
+							x2 : 0,
+							y2 : 1
+						},
+						stops : [ [ 0.1, '#000' ], [ 0.3, '#333' ] ]
+					},
+					stroke : '#000000',
+					style : {
+						color : 'yellow'
+					}
+				}
+			}
+		},
+		inputStyle : {
+			backgroundColor : '#333',
+			color : 'silver'
+		},
+		labelStyle : {
+			color : 'silver'
+		}
+	},
+
+	navigator : {
+		handles : {
+			backgroundColor : '#666',
+			borderColor : '#AAA'
+		},
+		outlineColor : '#CCC',
+		maskFill : 'rgba(16, 16, 16, 0.5)',
+		series : {
+			color : '#7798BF',
+			lineColor : '#A6C7ED'
+		}
+	},
+
+	scrollbar : {
+		barBackgroundColor : {
+			linearGradient : {
+				x1 : 0,
+				y1 : 0,
+				x2 : 0,
+				y2 : 1
+			},
+			stops : [ [ 0.4, '#888' ], [ 0.6, '#555' ] ]
+		},
+		barBorderColor : '#CCC',
+		buttonArrowColor : '#CCC',
+		buttonBackgroundColor : {
+			linearGradient : {
+				x1 : 0,
+				y1 : 0,
+				x2 : 0,
+				y2 : 1
+			},
+			stops : [ [ 0.4, '#888' ], [ 0.6, '#555' ] ]
+		},
+		buttonBorderColor : '#CCC',
+		rifleColor : '#FFF',
+		trackBackgroundColor : {
+			linearGradient : {
+				x1 : 0,
+				y1 : 0,
+				x2 : 0,
+				y2 : 1
+			},
+			stops : [ [ 0, '#000' ], [ 1, '#333' ] ]
+		},
+		trackBorderColor : '#666'
+	},
+
+	// special colors for some of the demo examples
+	legendBackgroundColor : 'rgba(48, 48, 48, 0.8)',
+	legendBackgroundColorSolid : 'rgb(70, 70, 70)',
+	dataLabelsColor : '#444',
+	textColor : '#E0E0E0',
+	maskColor : 'rgba(255,255,255,0.3)'
 };
