@@ -39,7 +39,8 @@ var DATA_RANGE = {
 
 var GRAPHS = {
 		historicalHashrate : null,
-		historicalBalances : null
+		historicalBalances : null,
+		summaryChart : null
 };
 
 var SHOWING = {
@@ -54,12 +55,12 @@ var SHOWING = {
 
 var TIME_SCALES = {
 	HASHRATE : {
-		resolution: '5min',
-		range: '24hr'
+		resolution: '30min',
+		range: '3day'
 	},
 	BALANCES : {
-		resolution: '1hr',
-		range: '1wk'
+		resolution: '30min',
+		range: '3day'
 	}
 };
 
@@ -215,6 +216,108 @@ var historicalBalanceLineChart = {
     }
 };
 
+var summaryChart = {
+	title : {
+		text : null
+	},
+	legend : {
+		enabled : true
+	},
+	xAxis : {
+		type : 'datetime',
+		title : {
+			text : null
+		},
+		dateTimeLabelFormats : {
+			month : '%e. %b',
+			year : '%b'
+		}
+	},
+	yAxis : [ {
+		title : {
+			text : 'Bitcoin'
+		},
+		plotLines : [ {
+			color : '#fd8d3c',
+			width : 2,
+			value : 0.01,
+			label : 'Payout',
+			zIndex : 5,
+			dashStyle: 'dash'
+		} ],
+		min: 0
+	}, {
+		title : {
+			text : 'kHash/s'
+		},
+		min: 0,
+		opposite : true
+	} ],
+	plotOptions : {
+		areaspline : {
+			fillOpacity : 0.8,
+			stacking : 'normal'
+		}
+	},
+	series : [ {
+		name : 'Sent',
+		type : 'areaspline',
+		yAxis : 0,
+		data : [],
+		color : '#6baed6',
+		marker : {
+			symbol : 'circle',
+			radius : 2
+		},
+		tooltip : {
+			valuePrefix : '฿',
+			valueDecimals : 8
+		}
+	}, {
+		name : 'Confirmed',
+		type : 'areaspline',
+		yAxis : 0,
+		data : [],
+		color : '#3182bd',
+		marker : {
+			symbol : 'circle',
+			radius : 2
+		},
+		tooltip : {
+			valuePrefix : '฿',
+			valueDecimals : 8
+		}
+	}, {
+		name : 'Unconverted',
+		type : 'areaspline',
+		yAxis : 0,
+		data : [],
+		color : '#08519c',
+		marker : {
+			symbol : 'circle',
+			radius : 2
+		},
+		tooltip : {
+			valuePrefix : '฿',
+			valueDecimals : 8
+		}
+	}, {
+		name : 'Hashrate',
+		type : 'spline',
+		yAxis : 1,
+		data : [],
+		color : '#ff0a00',
+		marker : {
+			symbol : 'circle',
+			radius : 2
+		},
+		tooltip : {
+			valueSuffix : 'kH/s',
+			valueDecimals : 2
+		}
+	} ]
+};
+
 var THEMES = {
 	"daytime" : {
 		css: "//netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap.min.css",
@@ -222,7 +325,7 @@ var THEMES = {
 	},
 	"nighttime" : {
 		css: "//netdna.bootstrapcdn.com/bootswatch/3.1.1/slate/bootstrap.min.css",
-		charts: {}
+		charts: {} // Defined at bottom of file
 	}
 };
 
@@ -302,6 +405,7 @@ function initControls() {
 		updateBalancesVisibility();
 		replotHistoricalGraph();
 		replotBalanceGraph();
+		replotSummaryChart();
 	});
 	
 	$('#resolution_hashrate button').click(function (e) {
@@ -390,6 +494,10 @@ function initGraphs() {
 	if (GRAPHS.historicalBalances) {
 		GRAPHS.historicalBalances.destroy();
 	}
+	
+	if (GRAPHS.summaryChart) {
+		GRAPHS.summaryChart.destroy();
+	}
 
 	// Create hashrate graph
 	$('#historalHashrate').highcharts($.extend(true, {}, THEMES[currentTheme].charts, lineChartDefaults, historicalHashrateLineChart));
@@ -398,6 +506,10 @@ function initGraphs() {
 	// Create balances graph
 	$('#historicalBalances').highcharts($.extend(true, {}, THEMES[currentTheme].charts, lineChartDefaults, historicalBalanceLineChart));
 	GRAPHS.historicalBalances = $('#historicalBalances').highcharts();
+	
+	// Create summary graph
+	$('#summaryChart').highcharts($.extend(true, {}, THEMES[currentTheme].charts, summaryChart));
+	GRAPHS.summaryChart = $('#summaryChart').highcharts();
 };
 
 function getHistoricalData(force) {
@@ -432,6 +544,7 @@ function updateHashRateHistory() {
 		disableTimeScaleButtons('hashrate');
 
 		showHashRateLoading();
+		showSummaryLoading();
 
 		var url = sprintf(historicalHashRateURL, address, TIME_SCALES.HASHRATE.resolution, TIME_SCALES.HASHRATE.range);
 		
@@ -469,6 +582,7 @@ function updateBalancesHistory() {
 		disableTimeScaleButtons('balances');
 		
 		showBalancesLoading();
+		showSummaryLoading();
 		
 		var url = sprintf(historicalBalancesURL, address, TIME_SCALES.BALANCES.resolution, TIME_SCALES.BALANCES.range);
 		
@@ -681,8 +795,10 @@ function checkLoaded() {
 		LOADING.hashRate = STATES.READY;
 		
 		replotHistoricalGraph();
+		replotSummaryChart();
 		
 		hideHashRateLoading();
+		hideSummaryLoading();
 		enableTimeScaleButtons('hashrate');
 	}
 	
@@ -690,8 +806,10 @@ function checkLoaded() {
 		LOADING.balances = STATES.READY;
 		
 		replotBalanceGraph();
+		replotSummaryChart();
 		
 		hideBalancesLoading();
+		hideSummaryLoading();
 		enableTimeScaleButtons('balances');
 	}
 }
@@ -710,9 +828,19 @@ function replotBalanceGraph() {
 	GRAPHS.historicalBalances.redraw();
 }
 
+function replotSummaryChart() {
+	GRAPHS.summaryChart.series[0].setData(HISTORICAL_DATA.sent, false);
+	GRAPHS.summaryChart.series[1].setData(HISTORICAL_DATA.confirmed, false);
+	GRAPHS.summaryChart.series[2].setData(HISTORICAL_DATA.unconverted, false);
+	
+	GRAPHS.summaryChart.series[3].setData(HISTORICAL_DATA.hashRate, false);
+	GRAPHS.summaryChart.redraw();
+}
+
 function reflowGraphs() {
 	GRAPHS.historicalHashrate.reflow();
 	GRAPHS.historicalBalances.reflow();
+	GRAPHS.summaryChart.reflow();
 }
 
 
@@ -747,16 +875,16 @@ function getTickValues(firstValue, lastValue) {
 function updateValues() {
 	updateHashrateMetrics();
 	
-	setValue("#hashrate", sprintf(hashrateDecimalFormatString, CURRENT_DATA.hashRate));
+	setValue(".hashrateValue", sprintf(hashrateDecimalFormatString, CURRENT_DATA.hashRate));
 	
 	document.title = sprintf(titleFormatString, CURRENT_DATA.hashRate);
 	
-	setValue("#sent", sprintf(bitcoinFormatString, CURRENT_DATA.sent));
-	setValue("#confirmed", sprintf(bitcoinFormatString, CURRENT_DATA.confirmed));
-	setValue("#unconverted", sprintf(bitcoinFormatString, CURRENT_DATA.unconverted));
+	setValue(".sentValue", sprintf(bitcoinFormatString, CURRENT_DATA.sent));
+	setValue(".confirmedValue", sprintf(bitcoinFormatString, CURRENT_DATA.confirmed));
+	setValue(".unconvertedValue", sprintf(bitcoinFormatString, CURRENT_DATA.unconverted));
 	
 	var totalUnsentBalance = CURRENT_DATA.confirmed + CURRENT_DATA.unconverted;
-	setValue("#unsent", sprintf(bitcoinFormatString, totalUnsentBalance));
+	setValue(".unsentValue", sprintf(bitcoinFormatString, totalUnsentBalance));
 
 	if (lastUpdate.getTime() > 0) {
 		setValue("#updated", lastUpdate.toLocaleString());
@@ -860,6 +988,14 @@ function showBalancesLoading() {
 
 function hideBalancesLoading() {
 	GRAPHS.historicalBalances.hideLoading();
+}
+
+function showSummaryLoading() {
+	GRAPHS.summaryChart.showLoading();
+}
+
+function hideSummaryLoading() {
+	GRAPHS.summaryChart.hideLoading();
 }
 
 function startInterval() {
