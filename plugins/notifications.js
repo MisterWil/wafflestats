@@ -133,7 +133,7 @@ function updatePayouts(address, data) {
 			    address: address,
 				txn : paymentData.txn,
 				amount : paymentData.amount,
-				time : new Date(paymentData.time)
+				time : new Date(paymentData.time + " UTC") // Goddamn seriously? UTC offset was wrong so all payments are slightly off
 			});
 
 			payment.save(function(err, payment) {
