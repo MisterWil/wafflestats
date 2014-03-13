@@ -43,21 +43,27 @@ block header
           | Charts
       li.dropdown
         a.dropdown-toggle(href="#", data-toggle="dropdown")
-          | Color Mode&nbsp;
+          i.fa.fa-wrench.fa-lg &nbsp;
+          | Options&nbsp;
           i.caret
         ul.dropdown-menu
           li
-            a.theme-link(href="#", data-theme="daytime") Daytime
+            a.theme-link(href="#", data-theme="daytime")
+              i.fa.fa-sun-o.fa-lg &nbsp;
+              | Daytime Mode
           li
-            a.theme-link(href="#", data-theme="nighttime") Nighttime
+            a.theme-link(href="#", data-theme="nighttime")
+              i.fa.fa-moon-o.fa-lg &nbsp;
+              | Nighttime Mode
+          li.divider
+          li
+            a#notifications(href="/notifications/")
+              i.fa.fa-envelope.fa-lg &nbsp;
+              | Get Notifications
   .nav.navbar-nav.navbar-right
       ul.nav.navbar-nav
         li
-          a#notifications(href="/notifications/")
-            i.fa.fa-envelope.fa-lg &nbsp;
-            | Get Notifications
-        li
-          a(href="#")
+          a.lastUpdated(href="#")
             label Last Updated:&nbsp;
             span#updated Never
 
@@ -68,13 +74,13 @@ block content
       i.fa.fa-heart.fa-lg &nbsp;
       strong Love WAFFLEStats? Please, show it by donating bitcoins! Donate to: 1Pr87ypYdG8eMTNUXR4rT1q2P1VJ7yu1b5
   
-  .goddamn.container-fluid
-    .goddamn.tab-content
-      #summary.tab-pane.active.fade.in
+  .container-fluid.goddamn
+    .tab-content.goddamn
+      #summary.tab-pane.active.fade.in.goddamn
         include summary
         
       #details.tab-pane.fade
-        strong DETAILS HERE
+        include details
         
       #charts.tab-pane.fade
         include charts

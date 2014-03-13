@@ -1,0 +1,68 @@
+.row
+  .col-md-12.table-responsive
+    span
+      h2(style="display: inline-block;") Statistics&nbsp;
+      span.dropdown
+        a(href="#", data-toggle="dropdown")
+          span#detailsRangeStr Last 24 Hours
+          span.caret
+        ul.dropdown-menu(role="menu")
+          li
+            a.detailsRange(href="#", data-range="1hr") Last Hour
+          li
+            a.detailsRange(href="#", data-range="6hr") Last 6 Hours
+          li
+            a.detailsRange(href="#", data-range="12hr") Last 12 Hours
+          li
+            a.detailsRange(href="#", data-range="24hr") Last 24 Hours
+          li
+            a.detailsRange(href="#", data-range="3day") Last 3 Days
+          li
+            a.detailsRange(href="#", data-range="7day") Last 7 Days
+          li
+            a.detailsRange(href="#", data-range="lifetime") Lifetime
+    table.table
+      thead
+        tr
+          th.text-center.col-md-4 Average Hashrate
+          th.text-center.col-md-4 Minimum Hashrate
+          th.text-center.col-md-4 Maximum Hashrate
+      tbody
+        tr.text-center
+          td 
+            span.avgHashrate 0.00 kH/s
+          td 
+            span.minHashrate 0.00 kH/s
+          td 
+            span.maxHashrate 0.00 kH/s
+    table.table
+      thead
+        tr
+          th.text-center.col-md-3 Amount Earned
+          th.text-center.col-md-3 BTC / Hour
+          th.text-center.col-md-3 BTC / Day
+          th.text-center.col-md-3 BTC / Day / 1mH
+      tbody
+        tr.text-center
+          td
+            i.fa.fa-btc &nbsp;
+            span.amountEarned 0.00000000
+          td
+            i.fa.fa-btc &nbsp;
+            span.btcPerHour 0.00000000
+          td
+            i.fa.fa-btc &nbsp;
+            span.btcPerDay 0.00000000
+          td
+            i.fa.fa-btc &nbsp;
+            span.btcPerDayPerMhash 0.00000000
+.row
+  .col-md-12
+    h2 Payment History
+    table#paymentHistory.table.table-striped
+      thead
+        tr
+          th.text-center.col-md-2 Amount
+          th.text-center.col-md-2 Time
+          th.text-center.col-md-8 Transaction ID
+      tbody

@@ -3,6 +3,7 @@ var extend = require("xtend");
 
 var mongoose = require('mongoose');
 var History = mongoose.model('History');
+var Payment = mongoose.model('Payment');
 
 // Valid resolution and ranges
 var ONE_MINUTE = '1min';
@@ -54,18 +55,22 @@ module.exports = function(app, rclient) {
 		}
 	};
 	
+	routes.granularHistory = function(req, res) {
+		processAggregation(req, res, true, true);
+	};
+	
 	routes.granularHashRate = function(req, res) {
-		processHistoricalAggregation(req, res, getHashRateAggregatePipeline);
+		processAggregation(req, res, true, false);
 	};
 	
 	routes.granularBalances = function(req, res) {
-		processHistoricalAggregation(req, res, getBalanceAggregatePipeline);
+		processAggregation(req, res, false, true);
 	};
 	
 	return routes;
 };
 
-function processHistoricalAggregation(req, res, aggregationFunction) {
+function processAggregation(req, res, includeHashrate, includeBalance) {
 	// Setup API path for remote json call
 	if (req.params.address != undefined && req.params.resolution != undefined && req.params.range != undefined) {
 		
@@ -92,18 +97,33 @@ function processHistoricalAggregation(req, res, aggregationFunction) {
 		var rangeDate = new Date();
 		rangeDate.setHours(rangeDate.getHours() - getHours(range));
 
-		var pipeline = aggregationFunction(btcAddr, resolution, rangeDate);
-		var aggregateQuery = History.aggregate(pipeline);
+		var pipeline = getAggregatePipeline(btcAddr, resolution, rangeDate, includeHashrate, includeBalance);
+		var historicalAggregation = History.aggregate(pipeline);
 		
-		aggregateQuery.exec(function (err, result) {
+		historicalAggregation.exec(function (err, result) {
 			if (err) {
 				log.error(err);
 				return res.send({ error: err });
 			}
-
-			var a = [].slice.call(result);
+			
+			var historicalData = [].slice.call(result);
+			
+			if (includeBalance) {
 				
-			res.send(a);
+				Payment.find({address: btcAddr, time: { $gte: rangeDate}}).sort({time: 1}).exec(function (err, results) {
+					if (err) {
+						log.error(err);
+						return res.send({ error: err });
+					}
+					
+					historicalData.push(results);
+					
+					return res.send(historicalData);
+				});
+				
+			} else {
+				return res.send(historicalData);
+			}
 			
 		});
 		
@@ -112,29 +132,30 @@ function processHistoricalAggregation(req, res, aggregationFunction) {
 	}
 }
 
-function getHashRateAggregatePipeline(btcAddr, resolution, fromDate) {
+function getAggregatePipeline(btcAddr, resolution, fromDate, includeHashrate,
+		includeBalance) {
 	var groupBy = {
-        "year" : {
-            $year : "$createdAt"
-        },
-        "month" : {
-            $month : "$createdAt"
-        },
-        "day" : {
-            $dayOfMonth : "$createdAt"
-        }
-    };
-	
+		"year" : {
+			$year : "$createdAt"
+		},
+		"month" : {
+			$month : "$createdAt"
+		},
+		"day" : {
+			$dayOfMonth : "$createdAt"
+		}
+	};
+
 	var sortBy = {
-            "_id.year" : 1,
-            "_id.month" : 1,
-            "_id.day" : 1
-    };
-	
+		"_id.year" : 1,
+		"_id.month" : 1,
+		"_id.day" : 1
+	};
+
 	var appendMinutes = false;
 	var appendHours = false;
 
-	switch(resolution) {
+	switch (resolution) {
 	case ONE_MINUTE:
 	case FIVE_MINUTE:
 	case THIRTY_MINUTE:
@@ -142,240 +163,119 @@ function getHashRateAggregatePipeline(btcAddr, resolution, fromDate) {
 	case ONE_HOUR:
 		appendHours = true;
 	}
-	
-	if(appendHours) {
-        groupBy["hour"] = {
-            $hour : "$createdAt"  
-        };
-        sortBy["_id.hour"] = 1;
-    }
-	
-    if(appendMinutes) {
-    	var resVal = 1;
-    	
-    	if (resolution === FIVE_MINUTE) {
-    		resVal = 5;
-    	} else if (resolution === THIRTY_MINUTE) {
-    		resVal = 30;
-    	}
-    	
-        groupBy["minute"] = {
-        "$subtract" : [
-                       {
-                           "$minute" : "$createdAt"
-                       },
-                       {
-                           "$mod" : [
-                               {
-                                   "$minute" : "$createdAt"
-                               },
-                               resVal
-                           ]
-                       }
-                   ]
-        };
-        sortBy["_id.minute"] = 1;
-    }
-    
-    groupBy["second"] = {
-            "$subtract" : [
-                           {
-                               "$second" : "$createdAt"
-                           },
-                           {
-                               "$mod" : [
-                                   {
-                                       "$second" : "$createdAt"
-                                   },
-                                   60
-                               ]
-                           }
-                       ]
-            };
-            sortBy["_id.second"] = 1;
-    
-    var pipeline = [
-        {
-            $match: {
-            	"address" : btcAddr,
-            	"createdAt" : { $gte: fromDate }
-            }
-        },
-        {
-            $project: {
-                _id : 0,
-                createdAt : 1,
-                hashRate : 1
-            }
-        },
-        {
-            $group: {
-                    "_id": groupBy,
-                    "createdAt" : {
-                    	$min: "$createdAt",
-                    },
-                    "count": {
-                        $sum: 1
-                    },
-                    "hashRate": {
-                    	$avg: "$hashRate"
-                    }
-                }
-        },
-        {
-            $sort: sortBy
-        },
-        {
-            $project: {
-                _id : 0,
-                createdAt : 1,
-                count: 1,
-                hashRate : 1
-            }
-        }
-    ];
-    
-    return pipeline;
-}
 
-function getBalanceAggregatePipeline(btcAddr, resolution, fromDate) {
-	var groupBy = {
-        "year" : {
-            $year : "$createdAt"
-        },
-        "month" : {
-            $month : "$createdAt"
-        },
-        "day" : {
-            $dayOfMonth : "$createdAt"
-        }
-    };
-	
-	var sortBy = {
-            "_id.year" : 1,
-            "_id.month" : 1,
-            "_id.day" : 1
-    };
-	
-	var appendMinutes = false;
-	var appendHours = false;
-	
-	switch(resolution) {
-	case ONE_MINUTE:
-	case FIVE_MINUTE:
-	case THIRTY_MINUTE:
-		appendMinutes = true;
-	case ONE_HOUR:
-		appendHours = true;
+	if (appendHours) {
+		groupBy["hour"] = {
+			$hour : "$createdAt"
+		};
+		sortBy["_id.hour"] = 1;
+	}
+
+	if (appendMinutes) {
+		var resVal = 1;
+
+		if (resolution === FIVE_MINUTE) {
+			resVal = 5;
+		} else if (resolution === THIRTY_MINUTE) {
+			resVal = 30;
+		}
+
+		groupBy["minute"] = {
+			"$subtract" : [ {
+				"$minute" : "$createdAt"
+			}, {
+				"$mod" : [ {
+					"$minute" : "$createdAt"
+				}, resVal ]
+			} ]
+		};
+		sortBy["_id.minute"] = 1;
+	}
+
+	groupBy["second"] = {
+		"$subtract" : [ {
+			"$second" : "$createdAt"
+		}, {
+			"$mod" : [ {
+				"$second" : "$createdAt"
+			}, 60 ]
+		} ]
+	};
+	sortBy["_id.second"] = 1;
+
+	var projection = {
+		_id : 0,
+		createdAt : 1
+	};
+
+	var endProjection = {
+		_id : 0,
+		createdAt : 1,
+		count : 1
+	};
+
+	var group = {
+		"_id" : groupBy,
+		"createdAt" : {
+			$min : "$createdAt",
+		},
+		"count" : {
+			$sum : 1
+		}
+	};
+
+	if (includeHashrate) {
+		projection["hashRate"] = 1;
+		group["hashrate"] = {
+				$avg : "$hashRate"
+		};
+		endProjection["hashrate"] = 1;
 	}
 	
-	if(appendHours) {
-        groupBy["hour"] = {
-            $hour : "$createdAt"  
-        };
-        sortBy["_id.hour"] = 1;
-    }
+	if (includeBalance) {
+		projection["balances"] = {
+				"sent": 1,
+				"confirmed": 1,
+				"unconverted": 1
+		};
+		
+		group["sent"] = {
+    		$avg: "$balances.sent"
+    	};
+		
+    	group["confirmed"] = {
+    		$avg: "$balances.confirmed"
+    	};
+    	
+    	group["unconverted"] = {
+            $avg: "$balances.unconverted" 
+    	};
+    	
+    	endProjection["balances"] = {
+				"sent": "$sent",
+				"confirmed": "$confirmed",
+				"unconverted": "$unconverted"
+		};
+	}
+
+	var pipeline = [ {
+		$match : {
+			"address" : btcAddr,
+			"createdAt" : {
+				$gte : fromDate
+			}
+		}
+	}, {
+		$project : projection
+	}, {
+		$group : group
+	}, {
+		$sort : sortBy
+	}, {
+		$project : endProjection
+	} ];
 	
-    if(appendMinutes) {
-    	var resVal = 1;
-    	
-    	if (resolution === FIVE_MINUTE) {
-    		resVal = 5;
-    	} else if (resolution === THIRTY_MINUTE) {
-    		resVal = 30;
-    	}
-    	
-        groupBy["minute"] = {
-        "$subtract" : [
-                       {
-                           "$minute" : "$createdAt"
-                       },
-                       {
-                           "$mod" : [
-                               {
-                                   "$minute" : "$createdAt"
-                               },
-                               resVal
-                           ]
-                       }
-                   ]
-        };
-        sortBy["_id.minute"] = 1;
-    }
-    
-    groupBy["second"] = {
-            "$subtract" : [
-                           {
-                               "$second" : "$createdAt"
-                           },
-                           {
-                               "$mod" : [
-                                   {
-                                       "$second" : "$createdAt"
-                                   },
-                                   60
-                               ]
-                           }
-                       ]
-            };
-            sortBy["_id.second"] = 1;
-    
-    var pipeline = [
-        {
-            $match: {
-            	"address" : btcAddr,
-            	"createdAt" : { $gte: fromDate }
-            }
-        },
-        {
-            $project: {
-                _id : 0,
-                createdAt : 1,
-        		balances: {
-        			sent: 1,
-        			confirmed: 1,
-        			unconverted: 1,
-        		}
-            }
-        },
-        {
-            $group: {
-                    "_id": groupBy,
-                    "createdAt" : {
-                    	$min: "$createdAt",
-                    },
-                    "count": {
-                        $sum: 1
-                    },
-                	"sent" : {
-                		$avg: "$balances.sent"
-                	},
-                	"confirmed" : {
-                		$avg: "$balances.confirmed"
-                	},
-                	"unconverted" : {
-                        $avg: "$balances.unconverted" 
-                	}
-                }
-        },
-        {
-            $sort: sortBy
-        },
-        {
-            $project: {
-                _id : 0,
-                createdAt : 1,
-                count: 1,
-                balances: {
-	    			sent: "$sent",
-	    			confirmed: "$confirmed",
-	    			unconverted: "$unconverted",
-                }
-            }
-        }
-    ];
-    
-    return pipeline;
+	return pipeline;
 }
 
 function getHours(range) {

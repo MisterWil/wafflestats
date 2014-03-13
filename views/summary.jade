@@ -1,27 +1,30 @@
-.row
-  .col-md-12
-    table.table
-      tr
-        th.text-center Hashrate
-        th.text-center Sent
-        th.text-center Confirmed
-        th.text-center Unconverted
-        th.text-center Unsent
-      tr.text-center
-        td 
-          span.hashrateValue 0.00
-          span &nbsp;kH/s
-        td
-          i.fa.fa-btc &nbsp;
-          span.sentValue 0.00000000
-        td
-          i.fa.fa-btc &nbsp;
-          span.confirmedValue 0.00000000
-        td
-          i.fa.fa-btc &nbsp;
-          span.unconvertedValue 0.00000000
-        td
-          i.fa.fa-btc &nbsp;
-          span.unsentValue 0.00000000
-  .col-md-12
+.row.goddamn
+  .col-md-12.table-responsive
+    table.table.table-condensed
+      thead
+        tr
+          th.text-center Hashrate
+          th.text-center Sent
+          th.text-center Confirmed
+          th.text-center Unconverted
+          th.text-center Unsent
+      tbody
+        tr.text-center
+          td 
+            span.hashrate 0.00 kH/s
+          td
+            i.fa.fa-btc &nbsp;
+            span.sentValue 0.00000000
+          td
+            i.fa.fa-btc &nbsp;
+            span.confirmedValue 0.00000000
+          td
+            i.fa.fa-btc &nbsp;
+            span.unconvertedValue 0.00000000
+          td
+            i.fa.fa-btc &nbsp;
+            span.unsentValue 0.00000000
+  .col-md-12.goddamn
+    .timeScale.text-right
+      +timeScale("summary")
     #summaryChart

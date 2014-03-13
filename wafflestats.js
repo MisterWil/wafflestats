@@ -63,6 +63,8 @@ var current = require('./routes/current')(app, rclient);
 var historical = require('./routes/historical')(app, rclient);
 var metrics = require('./routes/metrics')(app, rclient);
 var notifications = require('./routes/notifications')(app, rclient);
+var payments = require('./routes/payments')(app, rclient);
+var statistics = require('./routes/statistics')(app, rclient);
 
 // Waffles Version Info
 app.set('wafflesVersion', '0.8');
@@ -93,6 +95,7 @@ app.get('/template', function (req, res) {
 });
 
 app.get('/current/:address', current.temp_api);
+app.get('/historical/:address/:resolution/:range', historical.granularHistory);
 app.get('/historical/hashRate/:address/:resolution/:range', historical.granularHashRate);
 app.get('/historical/balances/:address/:resolution/:range', historical.granularBalances);
 
@@ -104,6 +107,10 @@ app.post('/notifications/config/:hashid', notifications.config.post);
 
 app.get('/notifications/remove/:hashid', notifications.remove.get);
 app.get('/notifications/remove/confirm/:hashid', notifications.remove.confirm.get);
+
+app.get('/payments/:address', payments.get);
+
+app.get('/statistics/:address/:range', statistics.get);
 
 app.get('/metrics', metrics.get);
 

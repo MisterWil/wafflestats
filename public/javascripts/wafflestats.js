@@ -7,16 +7,26 @@ var STATES = {
 
 var LOADING = {
 	hashRate: STATES.READY,
-	balances: STATES.READY
+	balances: STATES.READY,
+	summary: STATES.READY
 };
 
 var HISTORICAL_DATA = {
+	CHARTS : {
 		hashRate : [],
 		sent : [],
 		unsent : [],
 		confirmed : [],
 		unconverted : [],
 		payments: []
+	},
+	SUMMARY : {
+		hashRate : [],
+		sent : [],
+		confirmed : [],
+		unconverted : [],
+		payments: []
+	}
 };
 
 var CURRENT_DATA = {
@@ -27,30 +37,44 @@ var CURRENT_DATA = {
 };
 
 var DATA_RANGE = {
-		HASHRATE : {
-			firstValue : new Date(),
-			lastValue : new Date()
-		},
-		BALANCES : {
-			firstValue : new Date(),
-			lastValue : new Date()
-		}
+	HASHRATE : {
+		firstValue : new Date(),
+		lastValue : new Date()
+	},
+	BALANCES : {
+		firstValue : new Date(),
+		lastValue : new Date()
+	},
+	SUMMARY : {
+		firstValue : new Date(),
+		lastValue : new Date()
+	}
 };
 
 var GRAPHS = {
-		historicalHashrate : null,
-		historicalBalances : null,
-		summaryChart : null
+	historicalHashrate : null,
+	historicalBalances : null,
+	summaryChart : null
 };
 
 var SHOWING = {
-		BALANCES : {
-			confirmed: true,
-			unconverted: true,
-			unsent: true,
-			sent: false,
-			payments: true
-		}
+	BALANCES : {
+		confirmed: true,
+		unconverted: true,
+		unsent: true,
+		sent: false,
+		payments: true
+	},
+	HASHRATE : {
+		hashrate: true
+	},
+	SUMMARY : {
+		confirmed: true,
+		unconverted: true,
+		sent: false,
+		payments: true,
+		hashrate: true
+	}
 };
 
 var TIME_SCALES = {
@@ -59,8 +83,12 @@ var TIME_SCALES = {
 		range: '3day'
 	},
 	BALANCES : {
-		resolution: '30min',
-		range: '3day'
+		resolution: '1hr',
+		range: '1wk'
+	},
+	SUMMARY : {
+		resolution: '1hr',
+		range: '1wk'
 	}
 };
 
@@ -81,13 +109,27 @@ var SCALE_MILLIS = {
 
 var HISTORY_INTERVALS = {
 	hashRate: SCALE_MILLIS['val_'+TIME_SCALES.HASHRATE.resolution],
-	balances: SCALE_MILLIS['val_'+TIME_SCALES.BALANCES.resolution]
+	balances: SCALE_MILLIS['val_'+TIME_SCALES.BALANCES.resolution],
+	summary: SCALE_MILLIS['val_'+TIME_SCALES.SUMMARY.resolution]
 };
+
+var DETAILS_STRING = {
+	val_1hr : "Last Hour",
+	val_6hr : "Last 6 Hours",
+	val_12hr : "Last 12 Hours",
+	val_24hr : "Last 24 Hours",
+	val_3day : "Last 3 Days",
+	val_7day : "Last 7 Days",
+	val_lifetime : "Lifetime"
+};
+
+var DETAILS_RANGE = "24hr";
 
 // Last API and History Update
 var lastUpdate = new Date(0);
 var lastHashrateHistoryUpdate = new Date(0);
 var lastBalancesHistoryUpdate = new Date(0);
+var lastSummaryUpdate = new Date(0);
 
 // Last result cacheID
 var cacheID = null;
@@ -96,9 +138,12 @@ var cacheID = null;
 var wafflesVersion = null;
 
 // API proxy address and Bitcoin address
-var currentURL = '/current/';
+var currentURL = '/current/%s'; // /current/{btcAddr}
+var summaryURL = '/historical/%s/%s/%s'; // /historical/hashRate/{btcAddr}/{resolution}/{range}
 var historicalHashRateURL = '/historical/hashRate/%s/%s/%s'; // /historical/hashRate/{btcAddr}/{resolution}/{range}
 var historicalBalancesURL = '/historical/balances/%s/%s/%s'; // /historical/balances/{btcAddr}/{resolution}/{range}
+var paymentsURL = '/payments/%s'; // /payments/{btcAddr}
+var statisticsURL = '/statistics/%s/%s'; // /payments/{btcAddr}/{range}
 var address = null;
 
 // Interval object storage, how often to update the gui, api, and history
@@ -208,6 +253,15 @@ var historicalBalanceLineChart = {
         	symbol: 'circle',
         	radius: 2
         }
+    },
+    {
+        name: 'Payments',
+        data: [],
+        color: '#74c476',
+        marker: {
+        	symbol: 'circle',
+        	radius: 2
+        }
     }
     ],
     tooltip: {
@@ -302,6 +356,20 @@ var summaryChart = {
 			valueDecimals : 8
 		}
 	}, {
+        name: 'Payments',
+        type : 'spline',
+        yAxis : 0,
+        data: [],
+        color: '#74c476',
+        marker: {
+        	symbol: 'circle',
+        	radius: 2
+        },
+		tooltip : {
+			valuePrefix : '฿',
+			valueDecimals : 8
+		}
+    }, {
 		name : 'Hashrate',
 		type : 'spline',
 		yAxis : 1,
@@ -365,9 +433,7 @@ $(document).ready(function() {
 	initControls();
 		
 	initGraphs();
-	
-	updateBalancesVisibility();
-		
+
 	getHistoricalData(true);
 
 	startInterval();
@@ -389,6 +455,12 @@ function setDefaults() {
 }
 
 function initControls() {
+	$('.summaryTab').click(function() {
+		setTimeout(function() {
+			reflowGraphs();
+		}, 200);
+	});
+	
 	$('.chartsTab').click(function() {
 		setTimeout(function() {
 			reflowGraphs();
@@ -402,10 +474,18 @@ function initControls() {
 		$('#theme').attr('href', themeurl);
 
 		initGraphs();
-		updateBalancesVisibility();
 		replotHistoricalGraph();
 		replotBalanceGraph();
 		replotSummaryChart();
+	});
+	
+	$('.detailsTab').click(function () {
+		updatePaymentDetails();
+	});
+	
+	$('.detailsRange').click(function () {
+		DETAILS_RANGE = $(this).data('range');
+		updateDetails();
 	});
 	
 	$('#resolution_hashrate button').click(function (e) {
@@ -460,56 +540,63 @@ function initControls() {
 		e.preventDefault();
 	});
 	
-	// Set visiblity defaults
-	if (SHOWING.BALANCES.confirmed) {
-		$('#visibility_balances label[value="confirmed"]').button('toggle');
-	}
-	if (SHOWING.BALANCES.unconverted) {
-		$('#visibility_balances label[value="unconverted"]').button('toggle');
-	}
-	if (SHOWING.BALANCES.unsent) {
-		$('#visibility_balances label[value="unsent"]').button('toggle');
-	}
-	if (SHOWING.BALANCES.sent) {
-		$('#visibility_balances label[value="sent"]').button('toggle');
-	}
-	if (SHOWING.BALANCES.payments) {
-		$('#visibility_balances label[value="payments"]').button('toggle');
-	}
+	$('#resolution_summary button').click(function (e) {
+		if (LOADING.summary === STATES.READY) {
+			var value = $(this).val();
+			
+			if (value !== undefined) {
+				value = value.trim();
+				TIME_SCALES.SUMMARY.resolution = value;
+				updateSummary();
+			}
+		}
+		e.preventDefault();
+	});
 	
-	$('#visibility_balances label').click(function (e) {
-		var name = $(this).find('input').val();
-		
-		SHOWING.BALANCES[name] = !SHOWING.BALANCES[name];
-		
-		updateBalancesVisibility();
+	$('#range_summary button').click(function (e) {
+		if (LOADING.summary === STATES.READY) {
+			var value = $(this).val();
+			
+			if (value !== undefined) {
+				value = value.trim();
+				TIME_SCALES.SUMMARY.range = value;
+				updateSummary();
+			}
+		}
+		e.preventDefault();
 	});
 }
 
 function initGraphs() {
 	if (GRAPHS.historicalHashrate) {
+		saveHashrateVisibility();
 		GRAPHS.historicalHashrate.destroy();
 	}
 	
 	if (GRAPHS.historicalBalances) {
+		saveBalancesVisibility();
 		GRAPHS.historicalBalances.destroy();
 	}
 	
 	if (GRAPHS.summaryChart) {
+		saveSummaryVisibility();
 		GRAPHS.summaryChart.destroy();
 	}
 
 	// Create hashrate graph
 	$('#historalHashrate').highcharts($.extend(true, {}, THEMES[currentTheme].charts, lineChartDefaults, historicalHashrateLineChart));
 	GRAPHS.historicalHashrate = $('#historalHashrate').highcharts();
+	updateHashrateVisibility();
 	
 	// Create balances graph
 	$('#historicalBalances').highcharts($.extend(true, {}, THEMES[currentTheme].charts, lineChartDefaults, historicalBalanceLineChart));
 	GRAPHS.historicalBalances = $('#historicalBalances').highcharts();
+	updateBalancesVisibility();
 	
 	// Create summary graph
 	$('#summaryChart').highcharts($.extend(true, {}, THEMES[currentTheme].charts, summaryChart));
 	GRAPHS.summaryChart = $('#summaryChart').highcharts();
+	updateSummaryVisibility();
 };
 
 function getHistoricalData(force) {
@@ -522,11 +609,17 @@ function getHistoricalData(force) {
 	if (force || lastHashrateBalancesCall >= HISTORY_INTERVALS.balances) {
 		updateBalancesHistory();
 	}
+	
+	var lastSummaryCall = new Date().getTime() - lastSummaryUpdate.getTime();
+	if (force || lastSummaryCall >= HISTORY_INTERVALS.summary) {
+		updateSummary();
+	}
 }
 
 function unloadData() {
 	clearHistoricalHashRate();
 	clearHistoricalBalances();
+	clearSummary();
 }
 
 function updateHashRateHistory() {
@@ -544,7 +637,6 @@ function updateHashRateHistory() {
 		disableTimeScaleButtons('hashrate');
 
 		showHashRateLoading();
-		showSummaryLoading();
 
 		var url = sprintf(historicalHashRateURL, address, TIME_SCALES.HASHRATE.resolution, TIME_SCALES.HASHRATE.range);
 		
@@ -582,7 +674,6 @@ function updateBalancesHistory() {
 		disableTimeScaleButtons('balances');
 		
 		showBalancesLoading();
-		showSummaryLoading();
 		
 		var url = sprintf(historicalBalancesURL, address, TIME_SCALES.BALANCES.resolution, TIME_SCALES.BALANCES.range);
 		
@@ -605,12 +696,80 @@ function updateBalancesHistory() {
 	updateTimeScales(TIME_SCALES.BALANCES.range, TIME_SCALES.BALANCES.resolution, 'balances');
 }
 
+function updateSummary() {
+	TIME_SCALES.SUMMARY.range = setTimeScaleRange(TIME_SCALES.SUMMARY.range,
+			TIME_SCALES.SUMMARY.resolution, 'summary');
+	
+	HISTORY_INTERVALS.summary = SCALE_MILLIS['val_'+TIME_SCALES.SUMMARY.resolution];
+	
+	if (LOADING.summary === STATES.READY) {
+		LOADING.summary = STATES.LOADING;
+		
+		lastSummaryUpdate = new Date();
+		
+		disableTimeScaleButtons('summary');
+		
+		showSummaryLoading();
+		
+		var url = sprintf(summaryURL, address, TIME_SCALES.SUMMARY.resolution, TIME_SCALES.SUMMARY.range);
+
+		$.ajax({
+			url : url,
+			dataType : 'json',
+			success : function(data) {
+				if (data !== undefined && data.length > 0) {
+					processSummaryData(data);
+				}
+				LOADING.summary = STATES.LOADED;
+			},
+			timeout : 60000, // 60 second timeout
+			error : function(jqXHR, status, errorThrown) {
+				LOADING.summary = STATES.LOADED;
+			}
+		});
+	}
+	
+	updateTimeScales(TIME_SCALES.SUMMARY.range, TIME_SCALES.SUMMARY.resolution, 'summary');
+}
+
+function saveHashrateVisibility() {
+	SHOWING.HASHRATE.hashrate = GRAPHS.historicalHashrate.series[0].visible;
+}
+
+function updateHashrateVisibility() {
+	GRAPHS.historicalHashrate.series[0].setVisible(SHOWING.HASHRATE.hashrate);
+}
+
+function saveBalancesVisibility() {
+	SHOWING.BALANCES.unconverted = GRAPHS.historicalBalances.series[0].visible;
+	SHOWING.BALANCES.confirmed = GRAPHS.historicalBalances.series[1].visible;
+	SHOWING.BALANCES.unsent = GRAPHS.historicalBalances.series[2].visible;
+	SHOWING.BALANCES.sent = GRAPHS.historicalBalances.series[3].visible;
+	SHOWING.BALANCES.payments = GRAPHS.historicalBalances.series[4].visible;
+}
+
 function updateBalancesVisibility() {
 	GRAPHS.historicalBalances.series[0].setVisible(SHOWING.BALANCES.unconverted);
 	GRAPHS.historicalBalances.series[1].setVisible(SHOWING.BALANCES.confirmed);
 	GRAPHS.historicalBalances.series[2].setVisible(SHOWING.BALANCES.unsent);
 	GRAPHS.historicalBalances.series[3].setVisible(SHOWING.BALANCES.sent);
-	//GRAPHS.historicalBalances.series[4].setVisible(SHOWING.BALANCES.payments);
+	GRAPHS.historicalBalances.series[4].setVisible(SHOWING.BALANCES.payments);
+}
+
+function saveSummaryVisibility() {
+	SHOWING.SUMMARY.sent = GRAPHS.summaryChart.series[0].visible;
+	SHOWING.SUMMARY.confirmed = GRAPHS.summaryChart.series[1].visible;
+	SHOWING.SUMMARY.unconverted = GRAPHS.summaryChart.series[2].visible;
+	SHOWING.SUMMARY.payments = GRAPHS.summaryChart.series[3].visible;
+	SHOWING.SUMMARY.hashrate = GRAPHS.summaryChart.series[4].visible;
+}
+
+function updateSummaryVisibility() {
+	GRAPHS.summaryChart.series[0].setVisible(SHOWING.SUMMARY.sent);
+	GRAPHS.summaryChart.series[1].setVisible(SHOWING.SUMMARY.confirmed);
+	GRAPHS.summaryChart.series[2].setVisible(SHOWING.SUMMARY.unconverted);
+	GRAPHS.summaryChart.series[3].setVisible(SHOWING.SUMMARY.payments);
+	GRAPHS.summaryChart.series[4].setVisible(SHOWING.SUMMARY.hashrate);
 }
 
 function enableTimeScaleButtons(id) {
@@ -664,8 +823,8 @@ function processHistoricalHashRate(history) {
 			DATA_RANGE.HASHRATE.lastValue = date;
 		}
 
-		var khashrate = data.hashRate / 1000.0;
-		HISTORICAL_DATA.hashRate.push([ date.getTime(), khashrate ]);
+		var khashrate = data.hashrate / 1000.0;
+		HISTORICAL_DATA.CHARTS.hashRate.push([ date.getTime(), khashrate ]);
 	}
 }
 
@@ -676,39 +835,107 @@ function processHistoricalBalances(history) {
 	
 	for (var i = 0; i < histLen; i++) {
 		var data = history[i];
-		var date = new Date(data.createdAt);
 		
-		if (date.getTime() < DATA_RANGE.BALANCES.firstValue.getTime()) {
-			DATA_RANGE.BALANCES.firstValue = date;
+		if ($.isPlainObject(data)) {
+			var date = new Date(data.createdAt);
+			
+			if (date.getTime() < DATA_RANGE.BALANCES.firstValue.getTime()) {
+				DATA_RANGE.BALANCES.firstValue = date;
+			}
+			
+			if (date.getTime() > DATA_RANGE.BALANCES.lastValue.getTime()) {
+				DATA_RANGE.BALANCES.lastValue = date;
+			}
+			
+			HISTORICAL_DATA.CHARTS.sent.push([ date.getTime(), data.balances.sent ]);
+			HISTORICAL_DATA.CHARTS.unsent.push([ date.getTime(), data.balances.confirmed + data.balances.unconverted ]);
+			HISTORICAL_DATA.CHARTS.confirmed.push([ date.getTime(), data.balances.confirmed ]);
+			HISTORICAL_DATA.CHARTS.unconverted.push([ date.getTime(), data.balances.unconverted ]);
+		} else if (Array.isArray(data)) {
+			for (var p = 0; p < data.length; p++) {
+				var payment = data[p];
+				var date = new Date(payment.time);
+				
+				HISTORICAL_DATA.CHARTS.payments.push([ date.getTime(), getFloat(payment.amount) ]);
+			}
 		}
-		
-		if (date.getTime() > DATA_RANGE.BALANCES.lastValue.getTime()) {
-			DATA_RANGE.BALANCES.lastValue = date;
-		}
-		
-		HISTORICAL_DATA.sent.push([ date.getTime(), data.balances.sent ]);
-		HISTORICAL_DATA.unsent.push([ date.getTime(), data.balances.confirmed + data.balances.unconverted ]);
-		HISTORICAL_DATA.confirmed.push([ date.getTime(), data.balances.confirmed ]);
-		HISTORICAL_DATA.unconverted.push([ date.getTime(), data.balances.unconverted ]);
 	}
+}
+
+function processSummaryData(history) {
+	var histLen = history.length;
+	
+	clearSummary();
+	
+	for (var i = 0; i < histLen; i++) {
+		var data = history[i];
+		
+		if ($.isPlainObject(data)) {
+			var date = new Date(data.createdAt);
+			
+			if (date.getTime() < DATA_RANGE.SUMMARY.firstValue.getTime()) {
+				DATA_RANGE.SUMMARY.firstValue = date;
+			}
+			
+			if (date.getTime() > DATA_RANGE.SUMMARY.lastValue.getTime()) {
+				DATA_RANGE.SUMMARY.lastValue = date;
+			}
+			
+			var khashrate = data.hashrate / 1000.0;
+			HISTORICAL_DATA.SUMMARY.hashRate.push([ date.getTime(), khashrate ]);
+			
+			HISTORICAL_DATA.SUMMARY.sent.push([ date.getTime(), data.balances.sent ]);
+			HISTORICAL_DATA.SUMMARY.confirmed.push([ date.getTime(), data.balances.confirmed ]);
+			HISTORICAL_DATA.SUMMARY.unconverted.push([ date.getTime(), data.balances.unconverted ]);
+		} else if (Array.isArray(data)) {
+			for (var p = 0; p < data.length; p++) {
+				var payment = data[p];
+				var date = new Date(new Date(payment.time).toLocaleString());
+				
+				HISTORICAL_DATA.SUMMARY.payments.push([ date.getTime(), getFloat(payment.amount) ]);
+			}
+		}
+	}
+}
+
+function convertUTCDateToLocalDate(date) {
+    var newDate = new Date(date.getTime()+date.getTimezoneOffset()*60*1000);
+
+    var offset = date.getTimezoneOffset() / 60;
+    var hours = date.getHours();
+
+    newDate.setHours(hours - offset);
+
+    return newDate;   
 }
 
 function clearHistoricalHashRate() {
 	DATA_RANGE.HASHRATE.firstValue = new Date();
 	//DATA_RANGE.HASHRATE.lastValue = new Date();
 	
-	HISTORICAL_DATA.hashRate = [];
+	HISTORICAL_DATA.CHARTS.hashRate = [];
 }
 
 function clearHistoricalBalances() {
 	DATA_RANGE.BALANCES.firstValue = new Date();
 	//DATA_RANGE.BALANCES.lastValue = new Date();
 	
-	HISTORICAL_DATA.sent = [];
-	HISTORICAL_DATA.unsent = [];
-	HISTORICAL_DATA.confirmed = [];
-	HISTORICAL_DATA.unconverted = [];
-	HISTORICAL_DATA.payments = [];
+	HISTORICAL_DATA.CHARTS.sent = [];
+	HISTORICAL_DATA.CHARTS.unsent = [];
+	HISTORICAL_DATA.CHARTS.confirmed = [];
+	HISTORICAL_DATA.CHARTS.unconverted = [];
+	HISTORICAL_DATA.CHARTS.payments = [];
+}
+
+function clearSummary() {
+	DATA_RANGE.SUMMARY.firstValue = new Date();
+	//DATA_RANGE.BALANCES.lastValue = new Date();
+	
+	HISTORICAL_DATA.SUMMARY.sent = [];
+	HISTORICAL_DATA.SUMMARY.confirmed = [];
+	HISTORICAL_DATA.SUMMARY.unconverted = [];
+	HISTORICAL_DATA.SUMMARY.payments = [];
+	HISTORICAL_DATA.SUMMARY.hashRate = [];
 }
 
 function doUpdate() {
@@ -717,6 +944,7 @@ function doUpdate() {
 	if (lastAPICall >= apiInterval) {
 		if (address != undefined && btcAddressRegex.test(address)) {
 			updateAPI();
+			updateDetails();
 		}
 	}
 	
@@ -729,7 +957,9 @@ function doUpdate() {
 function updateAPI() {
 	lastUpdate = new Date();
 	
-	$.getJSON(currentURL + address, function(data) {
+	var url = sprintf(currentURL, address);
+	
+	$.getJSON(url, function(data) {
 		if (data !== undefined && data.error == "" || data.error === undefined) {
 			performVersionCheck(data);
 
@@ -761,19 +991,13 @@ function performVersionCheck(data) {
 
 function updateCurrentData(data) {
 	if (cacheID != data.cacheID) {
-		var date = new Date(data.createdAt);
-		
 		var formatted = formatAPIValues(data);
-		
-		DATA_RANGE.HASHRATE.lastValue = date;
-		DATA_RANGE.BALANCES.lastValue = date;
 		
 		CURRENT_DATA.sent = formatted.balances.sent;
 		CURRENT_DATA.confirmed = formatted.balances.confirmed;
 		CURRENT_DATA.unconverted = formatted.balances.unconverted;
 	
-		var khashrate = formatted.hashRate / 1000.0;
-		CURRENT_DATA.hashRate = khashrate;
+		CURRENT_DATA.hashRate = formatted.hashRate ;
 		
 		cacheID = data.cacheID;
 	}
@@ -783,11 +1007,19 @@ function formatAPIValues(data) {
 	return {
 		hashRate: parseInt(data.hash_rate),
 		balances: {
-			sent: parseFloat(data.balances.sent),
-			confirmed: parseFloat(data.balances.confirmed),
-			unconverted: parseFloat(data.balances.unconverted)
+			sent: getFloat(data.balances.sent),
+			confirmed: getFloat(data.balances.confirmed),
+			unconverted: getFloat(data.balances.unconverted)
 		}
 	};
+}
+
+function getFloat(stringVal) {
+	if (typeof stringVal === 'string') {
+		return parseFloat( stringVal.replace(/,/g,'') );
+	} else {
+		return parseFloat( stringVal );
+	}
 }
 
 function checkLoaded() {
@@ -798,7 +1030,6 @@ function checkLoaded() {
 		replotSummaryChart();
 		
 		hideHashRateLoading();
-		hideSummaryLoading();
 		enableTimeScaleButtons('hashrate');
 	}
 	
@@ -809,31 +1040,39 @@ function checkLoaded() {
 		replotSummaryChart();
 		
 		hideBalancesLoading();
-		hideSummaryLoading();
 		enableTimeScaleButtons('balances');
+	}
+	
+	if (LOADING.summary === STATES.LOADED) {
+		LOADING.summary = STATES.READY;
+
+		replotSummaryChart();
+		
+		hideSummaryLoading();
+		enableTimeScaleButtons('summary');
 	}
 }
 
 function replotHistoricalGraph() {
-	GRAPHS.historicalHashrate.series[0].setData(HISTORICAL_DATA.hashRate, false);
+	GRAPHS.historicalHashrate.series[0].setData(HISTORICAL_DATA.CHARTS.hashRate, false);
 	GRAPHS.historicalHashrate.redraw();
 }
 
 function replotBalanceGraph() {
-	GRAPHS.historicalBalances.series[0].setData(HISTORICAL_DATA.unconverted, false);
-	GRAPHS.historicalBalances.series[1].setData(HISTORICAL_DATA.confirmed, false);
-	GRAPHS.historicalBalances.series[2].setData(HISTORICAL_DATA.unsent, false);
-	GRAPHS.historicalBalances.series[3].setData(HISTORICAL_DATA.sent, false);
-	//GRAPHS.historicalBalances.series[4].setData(HISTORICAL_DATA.payments, false);
+	GRAPHS.historicalBalances.series[0].setData(HISTORICAL_DATA.CHARTS.unconverted, false);
+	GRAPHS.historicalBalances.series[1].setData(HISTORICAL_DATA.CHARTS.confirmed, false);
+	GRAPHS.historicalBalances.series[2].setData(HISTORICAL_DATA.CHARTS.unsent, false);
+	GRAPHS.historicalBalances.series[3].setData(HISTORICAL_DATA.CHARTS.sent, false);
+	GRAPHS.historicalBalances.series[4].setData(HISTORICAL_DATA.CHARTS.payments, false);
 	GRAPHS.historicalBalances.redraw();
 }
 
 function replotSummaryChart() {
-	GRAPHS.summaryChart.series[0].setData(HISTORICAL_DATA.sent, false);
-	GRAPHS.summaryChart.series[1].setData(HISTORICAL_DATA.confirmed, false);
-	GRAPHS.summaryChart.series[2].setData(HISTORICAL_DATA.unconverted, false);
-	
-	GRAPHS.summaryChart.series[3].setData(HISTORICAL_DATA.hashRate, false);
+	GRAPHS.summaryChart.series[0].setData(HISTORICAL_DATA.SUMMARY.sent, false);
+	GRAPHS.summaryChart.series[1].setData(HISTORICAL_DATA.SUMMARY.confirmed, false);
+	GRAPHS.summaryChart.series[2].setData(HISTORICAL_DATA.SUMMARY.unconverted, false);
+	GRAPHS.summaryChart.series[3].setData(HISTORICAL_DATA.SUMMARY.payments, false);
+	GRAPHS.summaryChart.series[4].setData(HISTORICAL_DATA.SUMMARY.hashRate, false);
 	GRAPHS.summaryChart.redraw();
 }
 
@@ -875,7 +1114,15 @@ function getTickValues(firstValue, lastValue) {
 function updateValues() {
 	updateHashrateMetrics();
 	
-	setValue(".hashrateValue", sprintf(hashrateDecimalFormatString, CURRENT_DATA.hashRate));
+	var formattedHashrate = formatHashrate(CURRENT_DATA.hashRate);
+	
+	// For charts page
+	setValue(".hashrateValue", formattedHashrate.valueStr);
+	$(".hashrateAbbr").prop('title', formattedHashrate.desc);
+	$(".hashrateAbbr").html(formattedHashrate.shortRateStr);
+	
+	// For elsehwere
+	setValue(".hashrate", formattedHashrate.shortValueStr);
 	
 	document.title = sprintf(titleFormatString, CURRENT_DATA.hashRate);
 	
@@ -927,14 +1174,14 @@ function updateHashrateMetrics() {
 	var sum = 0;
 	var average = 0;
 	
-	var histLength = HISTORICAL_DATA.hashRate.length;
+	var histLength = HISTORICAL_DATA.CHARTS.hashRate.length;
 	
 	if (histLength > 0) {
-		min = HISTORICAL_DATA.hashRate[0][1];
-		max = HISTORICAL_DATA.hashRate[0][1];
+		min = HISTORICAL_DATA.CHARTS.hashRate[0][1];
+		max = HISTORICAL_DATA.CHARTS.hashRate[0][1];
 		
 		for (var i = 0; i < histLength; i++) {
-			var val = HISTORICAL_DATA.hashRate[i][1];
+			var val = HISTORICAL_DATA.CHARTS.hashRate[i][1];
 			min = Math.min(min, val);
 			max = Math.max(max, val);
 			sum += val;
@@ -943,9 +1190,9 @@ function updateHashrateMetrics() {
 		average = sum / histLength;
 	}
 	
-	setValue("#minimumHR", sprintf(hashrateFormatString, min));
-	setValue("#averageHR", sprintf(hashrateFormatString, average));
-	setValue("#maximumHR", sprintf(hashrateFormatString, max));
+	setValue(".minimumHR", sprintf(hashrateFormatString, min));
+	setValue(".averageHR", sprintf(hashrateFormatString, average));
+	setValue(".maximumHR", sprintf(hashrateFormatString, max));
 }
 
 function showVersionNotification() {
@@ -1009,6 +1256,101 @@ function startInterval() {
 		console.log("Interval already started!");
 	}
 };
+
+function updateDetails() {
+	var url = sprintf(statisticsURL, address,  DETAILS_RANGE);
+	
+	$.ajax({
+		url : url,
+		dataType : 'json',
+		success : function(data) {
+			fillDetails(data);
+		},
+		timeout : 60000, // 60 second timeout
+		error : function(jqXHR, status, errorThrown) {
+			console.log("Error when loading payments table data: " + errorThrown);
+		}
+	});
+}
+
+function fillDetails(data) {
+	if (data && data.success) {
+		$("#detailsRangeStr").html(DETAILS_STRING['val_' + DETAILS_RANGE]);
+
+		setValue(".avgHashrate", formatHashrate(data.avgHashrate).shortValueStr);
+		setValue(".minHashrate", formatHashrate(data.minHashrate).shortValueStr);
+		setValue(".maxHashrate", formatHashrate(data.maxHashrate).shortValueStr);
+		
+		setValue(".amountEarned", sprintf(bitcoinFormatString, data.totalEarned));
+		setValue(".btcPerHour", sprintf(bitcoinFormatString, data.btcPerHour));
+		setValue(".btcPerDay", sprintf(bitcoinFormatString, data.btcPerDay));
+		setValue(".btcPerDayPerMhash", sprintf(bitcoinFormatString, data.btcPerDayPerMhash));
+	}
+}
+
+function updatePaymentDetails() {
+	var url = sprintf(paymentsURL, address);
+
+	$.ajax({
+		url : url,
+		dataType : 'json',
+		success : function(data) {
+			fillPaymentDetails(data);
+		},
+		timeout : 60000, // 60 second timeout
+		error : function(jqXHR, status, errorThrown) {
+			console.log("Error when loading payments table data: " + errorThrown);
+		}
+	});
+}
+
+function fillPaymentDetails(data) {
+	var rowHTML = "<tr class=\"text-center\"><td><i class=\"fa fa-btc\"/>&nbsp;<span>%s</span></td><td>%s</td><td>%s</td></tr>";
+	
+	$('#paymentHistory > tbody').empty();
+	
+	var dataLength = data.length;
+	for (var i = 0; i < dataLength; i++) {
+		var payment = data[i];
+		
+		var append = sprintf(rowHTML, payment.amount, new Date(payment.time).toLocaleString(), payment.txn);
+		
+		$('#paymentHistory > tbody:last').append(append);
+	}
+}
+
+function formatHashrate(rawHR) {
+	var results = {
+			rawHashrate: rawHR
+	};
+	
+	if (rawHR < 1000) {
+		results["valueStr"] = sprintf(hashrateDecimalFormatString, rawHR);
+		results["shortRateStr"] = "h/s";
+		results["longRateStr"] = "hash/s";
+		results["desc"] = "hashes per second";
+	} else if (rawHR < 1000 * 1000) {
+		results["valueStr"] = sprintf(hashrateDecimalFormatString, rawHR / 1000);
+		results["shortRateStr"] = "kH/s";
+		results["longRateStr"] = "kHash/s";
+		results["desc"] = "kilohashes per second";
+	} else if (rawHR < 1000 * 1000 * 1000) {
+		results["valueStr"] = sprintf(hashrateDecimalFormatString, rawHR / 1000 / 1000);
+		results["shortRateStr"] = "mH/s";
+		results["longRateStr"] = "mHash/s";
+		results["desc"] = "megahashes per second";
+	} else {
+		results["valueStr"] = sprintf(hashrateDecimalFormatString, rawHR / 1000 / 1000 / 1000);
+		results["shortRateStr"] = "gH/s";
+		results["longRateStr"] = "gHash/s";
+		results["desc"] = "gigahashes per second";
+	}
+	
+	results["shortValueStr"] = results["valueStr"] + ' ' + results["shortRateStr"];
+	results["longValueStr"] = results["valueStr"] + ' ' + results["longRateStr"];
+	
+	return results;
+}
 
 $.extend({
 	getUrlVars : function() {

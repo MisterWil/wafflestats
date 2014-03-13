@@ -6,6 +6,10 @@ body {
  padding-top: 60px;
 }
 
+.lastUpdated {
+	font-size: 9px;
+}
+
 .nowrap {
  white-space: nowrap;
 }
@@ -15,8 +19,12 @@ body {
 }
 
 .goddamn {
-	height:100%;
-  width:100%;
+	height: 100%;
+}
+
+#summaryChart {
+	height: 80%;
+	height: calc(100% - 130px);
 }
 
 #metrics {
@@ -29,7 +37,6 @@ body {
 }
 
 #wrapper {
- min-height: 100%;
  height: 100%;
  /* Negative indent footer by its height */
  margin: 0 auto -60px;

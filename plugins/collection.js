@@ -109,7 +109,7 @@ function cacheResult(address, result) {
 function saveHistorical(address, data) {
 	if (data !== undefined && data.hash_rate !== undefined) {
 	    try {
-	        var hashrate = Number(data.hash_rate);
+	        var hashrate = parseInt(data.hash_rate);
     	    var sent = Number(data.balances.sent);
     	    var confirmed = Number(data.balances.confirmed);
     	    var unconverted = Number(data.balances.unconverted);

@@ -8,7 +8,7 @@ block header
         | &nbsp; WAFFLEStats on Github
 
 block content
-  .container-fluid
+  #wrapper.container-fluid
     .container
       if (error && error.length > 0)
         .alert.alert-danger.alert-dismissable
@@ -42,6 +42,18 @@ block content
             label.sr-only(for="address") Bitcoin Address
             input.form-control(type="text", placeholder="Bitcoin Address", id="address", name="address", size="45")
             button.btn.btn-success(type="submit" value="Go") Go
+            
+  #footer
+    .container-fluid
+      .text-muted.text-center Donate BTC or Mining Time @ 1Pr87ypYdG8eMTNUXR4rT1q2P1VJ7yu1b5
+      .text-muted.text-center
+        span Created by Wil Schrader
+        span.reverse moc.liamg@
+          span.obv ilikebutts
+          | redarliw
+      .text-muted.text-center
+        span MisterWil on Reddit
+        span Wil on irc.freenode.net/##wafflepool
         
 block scripts
   script(src='/javascripts/index.js')

@@ -34,8 +34,6 @@
           h3 Historical Balance
       .row
         .col-sm-12
-          .text-left.pull-left
-            +visibility("balances", ['confirmed', 'unconverted', 'unsent', 'sent'])
           .text-right.pull-right
             +timeScale("balances")
       .row
@@ -48,20 +46,20 @@
       span.hashrateValue 0.00
     div#khs.text-right
       h4.text-muted
-        abbr(title="kilohashes per second") kH/s
+        abbr.hashrateAbbr(title="kilohashes per second") kH/s
     table.table.pull-right
       tr.text-muted.active
         th Minimum
       tr.text-muted
-        td.nowrap.text-left#minimumHR 0 kH/s
+        td.nowrap.text-left.minimumHR 0 kH/s
       tr.text-muted.active
         th Average
       tr.text-muted
-        td.nowrap.text-left#averageHR 0 kH/s
+        td.nowrap.text-left.averageHR 0 kH/s
       tr.text-muted.active
         th Maximum
       tr.text-muted
-        td.nowrap.text-left#maximumHR 0 kH/s
+        td.nowrap.text-left.maximumHR 0 kH/s
   .col-md-10.text-center.fixed-fluid
     h3 Historical Hashrate
     .timeScale.text-right
