@@ -156,7 +156,7 @@ var idleTimeout = 1000 * 60;
 var hashrateFormatString = "%.2f kH/s";
 var hashrateDecimalFormatString = "%.2f";
 var bitcoinFormatString = "%.8f";
-var titleFormatString = "%.2f kH/s - WAFFLEStats";
+var titleFormatString = "%s - WAFFLEStats";
 
 // Regex to test bitcoin addresses before pinging for current data
 // Disabled for historical data so I can test locally using historical data
@@ -1124,7 +1124,7 @@ function updateValues() {
 	// For elsehwere
 	setValue(".hashrate", formattedHashrate.shortValueStr);
 	
-	document.title = sprintf(titleFormatString, CURRENT_DATA.hashRate);
+	document.title = sprintf(titleFormatString, formattedHashrate.shortValueStr);
 	
 	setValue(".sentValue", sprintf(bitcoinFormatString, CURRENT_DATA.sent));
 	setValue(".confirmedValue", sprintf(bitcoinFormatString, CURRENT_DATA.confirmed));
