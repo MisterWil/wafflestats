@@ -95,9 +95,7 @@ function processAggregation(req, res) {
 					var maxDate = new Date(maxData.createdAt);
 					var minDate = new Date(minData.createdAt);
 					var hours = Math.abs(maxDate - minDate) / (1000*60*60); // Hours between two dates
-					
-					console.log(hours);
-					
+
 					var maxEarned = (maxData.balances.sent + maxData.balances.confirmed + maxData.balances.unconverted);
 					var minEarned = (minData.balances.sent + minData.balances.confirmed + minData.balances.unconverted);
 					var earnedOverPeriod = Math.abs(maxEarned - minEarned);
