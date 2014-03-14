@@ -3,7 +3,7 @@ var Schema = mongoose.Schema;
 
 module.exports = function(configuration) {
 	var History = new Schema({
-		address: { type: String, index: true },
+		address: { type: String },
 		createdAt: {type: Date, default: Date.now, expires: 60*60*24*7*2, index: true },
 		hashRate: Number,
 		balances: {
@@ -12,6 +12,9 @@ module.exports = function(configuration) {
 			unconverted: Number,
 		}
 	});
+	
+	// Compound Index
+	History.index({ address: 1, createdAt: 1 });
 	
 	mongoose.model('History', History);
 };
