@@ -54,6 +54,10 @@ function processAggregation(req, res) {
 				return res.send({ error: err });
 			}
 			
+			if (!result || result.length == 0) {
+				return res.send({ error: "Unable to find data!" });
+			}
+			
 			var hashrateData = result[0];
 			
 			var match = {
