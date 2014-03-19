@@ -18,14 +18,16 @@ var HISTORICAL_DATA = {
 		unsent : [],
 		confirmed : [],
 		unconverted : [],
-		payments: []
+		payments: [],
+		workers: {}
 	},
 	SUMMARY : {
 		hashRate : [],
 		sent : [],
 		confirmed : [],
 		unconverted : [],
-		payments: []
+		payments: [],
+		workers: {}
 	}
 };
 
@@ -57,6 +59,13 @@ var GRAPHS = {
 	summaryChart : null
 };
 
+var WORKER_HASHRATE_SERIES = {
+		HASHRATE: {},
+		HASHRATE_COUNT: 0,
+		SUMMARY: {},
+		SUMMARY_COUNT: 0
+};
+
 var SHOWING = {
 	BALANCES : {
 		confirmed: true,
@@ -66,21 +75,23 @@ var SHOWING = {
 		payments: true
 	},
 	HASHRATE : {
-		hashrate: true
+		hashrate: true,
+		workers: {}
 	},
 	SUMMARY : {
 		confirmed: true,
 		unconverted: true,
 		sent: false,
-		payments: true,
-		hashrate: true
+		payments: false,
+		hashrate: true,
+		workers: {}
 	}
 };
 
 var TIME_SCALES = {
 	HASHRATE : {
-		resolution: '30min',
-		range: '3day'
+		resolution: '1hr',
+		range: '1day'
 	},
 	BALANCES : {
 		resolution: '1hr',
@@ -88,7 +99,7 @@ var TIME_SCALES = {
 	},
 	SUMMARY : {
 		resolution: '1hr',
-		range: '1wk'
+		range: '3day'
 	}
 };
 
@@ -125,6 +136,12 @@ var DETAILS_STRING = {
 
 var DETAILS_RANGE = "24hr";
 
+var PREFERENCES = {
+	VIEW_MODE: 'view_mode',
+	TIME_SCALES: 'time_scales',
+	SHOWING: 'showing'
+};
+
 // Last API and History Update
 var lastUpdate = new Date(0);
 var lastHashrateHistoryUpdate = new Date(0);
@@ -139,9 +156,9 @@ var wafflesVersion = null;
 
 // API proxy address and Bitcoin address
 var currentURL = '/current/%s'; // /current/{btcAddr}
-var summaryURL = '/historical/%s/%s/%s'; // /historical/hashRate/{btcAddr}/{resolution}/{range}
-var historicalHashRateURL = '/historical/hashRate/%s/%s/%s'; // /historical/hashRate/{btcAddr}/{resolution}/{range}
-var historicalBalancesURL = '/historical/balances/%s/%s/%s'; // /historical/balances/{btcAddr}/{resolution}/{range}
+var summaryURL = '/historical/v2/%s/%s/%s'; // /historical/hashRate/{btcAddr}/{resolution}/{range}
+var historicalHashRateURL = '/historical/v2/hashRate/%s/%s/%s'; // /historical/hashRate/{btcAddr}/{resolution}/{range}
+var historicalBalancesURL = '/historical/v2/balances/%s/%s/%s'; // /historical/balances/{btcAddr}/{resolution}/{range}
 var paymentsURL = '/payments/%s'; // /payments/{btcAddr}
 var statisticsURL = '/statistics/%s/%s'; // /payments/{btcAddr}/{range}
 var address = null;
@@ -162,230 +179,6 @@ var titleFormatString = "%s - WAFFLEStats";
 // Disabled for historical data so I can test locally using historical data
 var btcAddressRegex = /^[13][1-9A-HJ-NP-Za-km-z]{26,33}/;
 
-// Graph setup
-var lineChartDefaults = {
-    	chart: {
-            type: 'spline'
-        },
-        title: {
-            text: null
-        },
-        xAxis: {
-        	type: 'datetime',
-            title: {
-                text: null
-            },
-	        dateTimeLabelFormats: {
-	            month: '%e. %b',
-	            year: '%b'
-	        }
-        },
-        yAxis: {
-        	min: 0
-        },
-        legend: {
-            enabled: true
-        }
-};
-
-// Historical hashrate overrides
-var historicalHashrateLineChart = {
-		yAxis: {
-            title: {
-                text: 'kHash/s'
-            }
-        },
-        series: [{
-            name: 'Hashrate',
-            data: [],
-            color: '#ff3333',
-            marker: {
-            	symbol: 'circle',
-            	radius: 2
-            }
-        }],
-        tooltip: {
-            valueSuffix: 'kH/s',
-            valueDecimals: 2
-        }
-};
-
-// Balance history override configuration
-var historicalBalanceLineChart = {
-	yAxis: {
-        title: {
-            text: 'btc'
-        }
-    },
-    series: [
-    {
-        name: 'Unconverted',
-        data: [],
-        color: '#a6bddb',
-        marker: {
-        	symbol: 'circle',
-        	radius: 2
-        }
-    },
-    {
-        name: 'Confirmed',
-        data: [],
-        color: '#74a9cf',
-        marker: {
-        	symbol: 'circle',
-        	radius: 2
-        }
-    },
-    {
-        name: 'Unsent',
-        data: [],
-        color: '#2b8cbe',
-        marker: {
-        	symbol: 'circle',
-        	radius: 2
-        }
-    },
-    {
-        name: 'Sent',
-        data: [],
-        color: '#045a8d',
-        marker: {
-        	symbol: 'circle',
-        	radius: 2
-        }
-    },
-    {
-        name: 'Payments',
-        data: [],
-        color: '#74c476',
-        marker: {
-        	symbol: 'circle',
-        	radius: 2
-        }
-    }
-    ],
-    tooltip: {
-        valuePrefix: '฿',
-        valueDecimals: 8
-    }
-};
-
-var summaryChart = {
-	title : {
-		text : null
-	},
-	legend : {
-		enabled : true
-	},
-	xAxis : {
-		type : 'datetime',
-		title : {
-			text : null
-		},
-		dateTimeLabelFormats : {
-			month : '%e. %b',
-			year : '%b'
-		}
-	},
-	yAxis : [ {
-		title : {
-			text : 'Bitcoin'
-		},
-		plotLines : [ {
-			color : '#fd8d3c',
-			width : 2,
-			value : 0.01,
-			label : 'Payout',
-			zIndex : 5,
-			dashStyle: 'dash'
-		} ],
-		min: 0
-	}, {
-		title : {
-			text : 'kHash/s'
-		},
-		min: 0,
-		opposite : true
-	} ],
-	plotOptions : {
-		areaspline : {
-			fillOpacity : 0.8,
-			stacking : 'normal'
-		}
-	},
-	series : [ {
-		name : 'Sent',
-		type : 'areaspline',
-		yAxis : 0,
-		data : [],
-		color : '#6baed6',
-		marker : {
-			symbol : 'circle',
-			radius : 2
-		},
-		tooltip : {
-			valuePrefix : '฿',
-			valueDecimals : 8
-		}
-	}, {
-		name : 'Confirmed',
-		type : 'areaspline',
-		yAxis : 0,
-		data : [],
-		color : '#3182bd',
-		marker : {
-			symbol : 'circle',
-			radius : 2
-		},
-		tooltip : {
-			valuePrefix : '฿',
-			valueDecimals : 8
-		}
-	}, {
-		name : 'Unconverted',
-		type : 'areaspline',
-		yAxis : 0,
-		data : [],
-		color : '#08519c',
-		marker : {
-			symbol : 'circle',
-			radius : 2
-		},
-		tooltip : {
-			valuePrefix : '฿',
-			valueDecimals : 8
-		}
-	}, {
-        name: 'Payments',
-        type : 'spline',
-        yAxis : 0,
-        data: [],
-        color: '#74c476',
-        marker: {
-        	symbol: 'circle',
-        	radius: 2
-        },
-		tooltip : {
-			valuePrefix : '฿',
-			valueDecimals : 8
-		}
-    }, {
-		name : 'Hashrate',
-		type : 'spline',
-		yAxis : 1,
-		data : [],
-		color : '#ff0a00',
-		marker : {
-			symbol : 'circle',
-			radius : 2
-		},
-		tooltip : {
-			valueSuffix : 'kH/s',
-			valueDecimals : 2
-		}
-	} ]
-};
-
 var THEMES = {
 	"daytime" : {
 		css: "//netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap.min.css",
@@ -405,6 +198,8 @@ $.ajaxSetup({
 });
 
 $(document).ready(function() {
+	
+	loadPreferences();
 	
 	setDefaults();
 
@@ -430,18 +225,43 @@ $(document).ready(function() {
 		$('#notifications').attr("href", "/notifications/"+address);
 	}
 	
-	initControls();
+	initGUI();
 		
 	initGraphs();
+	
+	reflowGraphs();
 
 	getHistoricalData(true);
 
 	startInterval();
 });
 
+$( window ).unload(function() {
+	saveBalancesVisibility();
+	saveHashrateVisibility();
+	saveSummaryVisibility();
+});
+
 $( window ).resize(function() {
 	reflowGraphs();
 });
+
+function loadPreferences() {
+	// Set prefered view mode
+	if (getPreference(PREFERENCES.VIEW_MODE)) {
+		currentTheme = getPreference(PREFERENCES.VIEW_MODE);
+	}
+	
+	// Set prefered ranges and resolutions
+	if (getPreference(PREFERENCES.TIME_SCALES)) {
+		TIME_SCALES = JSON.parse(getPreference(PREFERENCES.TIME_SCALES));
+	}
+	
+	// Set visibility preferences
+	if (getPreference(PREFERENCES.SHOWING)) {
+		SHOWING = JSON.parse(getPreference(PREFERENCES.SHOWING));
+	}
+}
 
 function setDefaults() {
 	$.pnotify.defaults.history = false;
@@ -454,7 +274,10 @@ function setDefaults() {
     });
 }
 
-function initControls() {
+function initGUI() {
+	// Set theme
+	$('#theme').attr('href', THEMES[currentTheme].css);
+	
 	$('.summaryTab').click(function() {
 		setTimeout(function() {
 			reflowGraphs();
@@ -470,13 +293,20 @@ function initControls() {
 	$('.theme-link').click(function() {
 		currentTheme = $(this).attr('data-theme');
 		
+		setPreference(PREFERENCES.VIEW_MODE, currentTheme);
+		
 		var themeurl = THEMES[currentTheme].css;
-		$('#theme').attr('href', themeurl);
-
-		initGraphs();
-		replotHistoricalGraph();
-		replotBalanceGraph();
-		replotSummaryChart();
+		
+		setTimeout(function () {
+			$('#theme').attr('href', themeurl);
+			
+			initGraphs();
+			replotHashrateGraph();
+			replotBalanceGraph();
+			replotSummaryChart();
+			
+			reflowGraphs();
+		}, 1);
 	});
 	
 	$('.detailsTab').click(function () {
@@ -495,6 +325,7 @@ function initControls() {
 			if (value !== undefined) {
 				value = value.trim();
 				TIME_SCALES.HASHRATE.resolution = value;
+				setPreference(PREFERENCES.TIME_SCALES, JSON.stringify(TIME_SCALES));
 				updateHashRateHistory();
 			}
 		}
@@ -508,6 +339,7 @@ function initControls() {
 			if (value !== undefined) {
 				value = value.trim();
 				TIME_SCALES.HASHRATE.range = value;
+				setPreference(PREFERENCES.TIME_SCALES, JSON.stringify(TIME_SCALES));
 				updateHashRateHistory();
 			}
 		}
@@ -521,6 +353,7 @@ function initControls() {
 			if (value !== undefined) {
 				value = value.trim();
 				TIME_SCALES.BALANCES.resolution = value;
+				setPreference(PREFERENCES.TIME_SCALES, JSON.stringify(TIME_SCALES));
 				updateBalancesHistory();
 			}
 		}
@@ -534,6 +367,7 @@ function initControls() {
 			if (value !== undefined) {
 				value = value.trim();
 				TIME_SCALES.BALANCES.range = value;
+				setPreference(PREFERENCES.TIME_SCALES, JSON.stringify(TIME_SCALES));
 				updateBalancesHistory();
 			}
 		}
@@ -547,6 +381,7 @@ function initControls() {
 			if (value !== undefined) {
 				value = value.trim();
 				TIME_SCALES.SUMMARY.resolution = value;
+				setPreference(PREFERENCES.TIME_SCALES, JSON.stringify(TIME_SCALES));
 				updateSummary();
 			}
 		}
@@ -560,6 +395,7 @@ function initControls() {
 			if (value !== undefined) {
 				value = value.trim();
 				TIME_SCALES.SUMMARY.range = value;
+				setPreference(PREFERENCES.TIME_SCALES, JSON.stringify(TIME_SCALES));
 				updateSummary();
 			}
 		}
@@ -570,6 +406,7 @@ function initControls() {
 function initGraphs() {
 	if (GRAPHS.historicalHashrate) {
 		saveHashrateVisibility();
+		clearHistoricalHashRateWorkerSummaries();
 		GRAPHS.historicalHashrate.destroy();
 	}
 	
@@ -580,6 +417,7 @@ function initGraphs() {
 	
 	if (GRAPHS.summaryChart) {
 		saveSummaryVisibility();
+		clearSummaryWorkerSeries();
 		GRAPHS.summaryChart.destroy();
 	}
 
@@ -644,7 +482,7 @@ function updateHashRateHistory() {
 			url : url,
 			dataType : 'json',
 			success : function(history) {
-				if (history !== undefined && history.length > 0) {
+				if (history) {
 					processHistoricalHashRate(history);
 				}
 				LOADING.hashRate = STATES.LOADED;
@@ -681,7 +519,7 @@ function updateBalancesHistory() {
 			url : url,
 			dataType : 'json',
 			success : function(history) {
-				if (history !== undefined && history.length > 0) {
+				if (history) {
 					processHistoricalBalances(history);
 				}
 				LOADING.balances = STATES.LOADED;
@@ -709,6 +547,8 @@ function updateSummary() {
 		
 		disableTimeScaleButtons('summary');
 		
+		saveSummaryVisibility();
+		
 		showSummaryLoading();
 		
 		var url = sprintf(summaryURL, address, TIME_SCALES.SUMMARY.resolution, TIME_SCALES.SUMMARY.range);
@@ -716,9 +556,9 @@ function updateSummary() {
 		$.ajax({
 			url : url,
 			dataType : 'json',
-			success : function(data) {
-				if (data !== undefined && data.length > 0) {
-					processSummaryData(data);
+			success : function(history) {
+				if (history) {
+					processSummaryData(history);
 				}
 				LOADING.summary = STATES.LOADED;
 			},
@@ -734,10 +574,26 @@ function updateSummary() {
 
 function saveHashrateVisibility() {
 	SHOWING.HASHRATE.hashrate = GRAPHS.historicalHashrate.series[0].visible;
+	
+	for (var username in WORKER_HASHRATE_SERIES.HASHRATE) {
+		SHOWING.HASHRATE.workers[username] = WORKER_HASHRATE_SERIES.HASHRATE[username].visible;
+	}
+	
+	setPreference(PREFERENCES.SHOWING, JSON.stringify(SHOWING));
 }
 
 function updateHashrateVisibility() {
 	GRAPHS.historicalHashrate.series[0].setVisible(SHOWING.HASHRATE.hashrate);
+	
+	for (var username in WORKER_HASHRATE_SERIES.HASHRATE) {
+		var showing = true; // Default workers to showing
+		
+		if (SHOWING.HASHRATE.workers.hasOwnProperty(username)) {
+			showing = SHOWING.HASHRATE.workers[username];
+		}
+		
+		WORKER_HASHRATE_SERIES.HASHRATE[username].setVisible(showing);
+	}
 }
 
 function saveBalancesVisibility() {
@@ -746,6 +602,8 @@ function saveBalancesVisibility() {
 	SHOWING.BALANCES.unsent = GRAPHS.historicalBalances.series[2].visible;
 	SHOWING.BALANCES.sent = GRAPHS.historicalBalances.series[3].visible;
 	SHOWING.BALANCES.payments = GRAPHS.historicalBalances.series[4].visible;
+	
+	setPreference(PREFERENCES.SHOWING, JSON.stringify(SHOWING));
 }
 
 function updateBalancesVisibility() {
@@ -758,28 +616,44 @@ function updateBalancesVisibility() {
 
 function saveSummaryVisibility() {
 	SHOWING.SUMMARY.sent = GRAPHS.summaryChart.series[0].visible;
-	SHOWING.SUMMARY.confirmed = GRAPHS.summaryChart.series[1].visible;
-	SHOWING.SUMMARY.unconverted = GRAPHS.summaryChart.series[2].visible;
+	SHOWING.SUMMARY.unconverted = GRAPHS.summaryChart.series[1].visible;
+	SHOWING.SUMMARY.confirmed = GRAPHS.summaryChart.series[2].visible;
 	SHOWING.SUMMARY.payments = GRAPHS.summaryChart.series[3].visible;
 	SHOWING.SUMMARY.hashrate = GRAPHS.summaryChart.series[4].visible;
+	
+	for (var username in WORKER_HASHRATE_SERIES.SUMMARY) {
+		SHOWING.SUMMARY.workers[username] = WORKER_HASHRATE_SERIES.SUMMARY[username].visible;
+	}
+	
+	setPreference(PREFERENCES.SHOWING, JSON.stringify(SHOWING));
 }
 
 function updateSummaryVisibility() {
 	GRAPHS.summaryChart.series[0].setVisible(SHOWING.SUMMARY.sent);
-	GRAPHS.summaryChart.series[1].setVisible(SHOWING.SUMMARY.confirmed);
-	GRAPHS.summaryChart.series[2].setVisible(SHOWING.SUMMARY.unconverted);
+	GRAPHS.summaryChart.series[1].setVisible(SHOWING.SUMMARY.unconverted);
+	GRAPHS.summaryChart.series[2].setVisible(SHOWING.SUMMARY.confirmed);
 	GRAPHS.summaryChart.series[3].setVisible(SHOWING.SUMMARY.payments);
 	GRAPHS.summaryChart.series[4].setVisible(SHOWING.SUMMARY.hashrate);
+	
+	for (var username in WORKER_HASHRATE_SERIES.SUMMARY) {
+		var showing = false; // Default workers to hidden
+		
+		if (SHOWING.SUMMARY.workers.hasOwnProperty(username)) {
+			showing = SHOWING.SUMMARY.workers[username];
+		}
+		
+		WORKER_HASHRATE_SERIES.SUMMARY[username].setVisible(showing);
+	}
 }
 
 function enableTimeScaleButtons(id) {
-	$('#range_'+id+' button').not('.title').prop("disabled", false);
-	$('#resolution_'+id+' button').not('.title').prop("disabled", false);
+	$('#range_'+id+' button').not('.header').prop("disabled", false);
+	$('#resolution_'+id+' button').not('.header').prop("disabled", false);
 }
 
 function disableTimeScaleButtons(id) {
-	$('#range_'+id+' button').not('.title').prop("disabled", true);
-	$('#resolution_'+id+' button').not('.title').prop("disabled", true);
+	$('#range_'+id+' button').not('.header').prop("disabled", true);
+	$('#resolution_'+id+' button').not('.header').prop("disabled", true);
 }
 
 function setTimeScaleRange(range, resolution, id) {
@@ -807,36 +681,66 @@ function updateTimeScales(range, resolution, id) {
 }
 
 function processHistoricalHashRate(history) {
-	var histLen = history.length;
+	if (history.global) {
+		var histLen = history.global.length;
+		
+		clearHistoricalHashRate();
 	
-	clearHistoricalHashRate();
-
-	for (var i = 0; i < histLen; i++) {
-		var data = history[i];
-		var date = new Date(data.createdAt);
-		
-		if (date.getTime() < DATA_RANGE.HASHRATE.firstValue.getTime()) {
-			DATA_RANGE.HASHRATE.firstValue = date;
+		for (var i = 0; i < histLen; i++) {
+			var data = history.global[i];
+			var date = new Date(data.createdAt);
+			
+			if (date.getTime() < DATA_RANGE.HASHRATE.firstValue.getTime()) {
+				DATA_RANGE.HASHRATE.firstValue = date;
+			}
+			
+			if (date.getTime() > DATA_RANGE.HASHRATE.lastValue.getTime()) {
+				DATA_RANGE.HASHRATE.lastValue = date;
+			}
+	
+			var khashrate = data.hashrate / 1000.0;
+			HISTORICAL_DATA.CHARTS.hashRate.push([ date.getTime(), khashrate ]);
 		}
+	}
+	
+	// Process workers
+	if (history.workers) {
+		var workerListLen = history.workers.length;
 		
-		if (date.getTime() > DATA_RANGE.HASHRATE.lastValue.getTime()) {
-			DATA_RANGE.HASHRATE.lastValue = date;
+		for (var w = 0; w < workerListLen; w++) {
+			var workerListData = history.workers[w];
+			
+			var date = new Date(workerListData._id);
+			
+			var workerLen = workerListData.workers.length;
+			
+			for (var i = 0; i < workerLen; i++) {
+				var workerData = workerListData.workers[i];
+				
+				var username = workerData._id;
+				var hashrate = workerData.hashrate;
+				var khashrate = hashrate / 1000.0;
+				
+				// Create the data object if it doesn't exist yet
+				if (!HISTORICAL_DATA.CHARTS.workers.hasOwnProperty(username)) {
+					HISTORICAL_DATA.CHARTS.workers[username] = [];
+				}
+				
+				HISTORICAL_DATA.CHARTS.workers[username].push([date.getTime(), khashrate]);
+			}
 		}
-
-		var khashrate = data.hashrate / 1000.0;
-		HISTORICAL_DATA.CHARTS.hashRate.push([ date.getTime(), khashrate ]);
 	}
 }
 
 function processHistoricalBalances(history) {
-	var histLen = history.length;
+	if (history.global) {
+		var histLen = history.global.length;
 	
-	clearHistoricalBalances();
-	
-	for (var i = 0; i < histLen; i++) {
-		var data = history[i];
+		clearHistoricalBalances();
 		
-		if ($.isPlainObject(data)) {
+		for (var i = 0; i < histLen; i++) {
+			var data = history.global[i];
+	
 			var date = new Date(data.createdAt);
 			
 			if (date.getTime() < DATA_RANGE.BALANCES.firstValue.getTime()) {
@@ -851,26 +755,30 @@ function processHistoricalBalances(history) {
 			HISTORICAL_DATA.CHARTS.unsent.push([ date.getTime(), data.balances.confirmed + data.balances.unconverted ]);
 			HISTORICAL_DATA.CHARTS.confirmed.push([ date.getTime(), data.balances.confirmed ]);
 			HISTORICAL_DATA.CHARTS.unconverted.push([ date.getTime(), data.balances.unconverted ]);
-		} else if (Array.isArray(data)) {
-			for (var p = 0; p < data.length; p++) {
-				var payment = data[p];
-				var date = new Date(payment.time);
-				
-				HISTORICAL_DATA.CHARTS.payments.push([ date.getTime(), getFloat(payment.amount) ]);
-			}
+		}
+	}
+	
+	// Process payments
+	if (history.payments) {
+		var payLen = history.payments.length;
+		for (var p = 0; p < payLen; p++) {
+			var payment = history.payments[p];
+			var date = new Date(payment.time);
+			
+			HISTORICAL_DATA.CHARTS.payments.push([ date.getTime(), getFloat(payment.amount) ]);
 		}
 	}
 }
 
 function processSummaryData(history) {
-	var histLen = history.length;
-	
-	clearSummary();
-	
-	for (var i = 0; i < histLen; i++) {
-		var data = history[i];
+	if (history.global) {
+		var histLen = history.global.length;
 		
-		if ($.isPlainObject(data)) {
+		clearSummary();
+		
+		for (var i = 0; i < histLen; i++) {
+			var data = history.global[i];
+			
 			var date = new Date(data.createdAt);
 			
 			if (date.getTime() < DATA_RANGE.SUMMARY.firstValue.getTime()) {
@@ -887,15 +795,65 @@ function processSummaryData(history) {
 			HISTORICAL_DATA.SUMMARY.sent.push([ date.getTime(), data.balances.sent ]);
 			HISTORICAL_DATA.SUMMARY.confirmed.push([ date.getTime(), data.balances.confirmed ]);
 			HISTORICAL_DATA.SUMMARY.unconverted.push([ date.getTime(), data.balances.unconverted ]);
-		} else if (Array.isArray(data)) {
-			for (var p = 0; p < data.length; p++) {
-				var payment = data[p];
-				var date = new Date(new Date(payment.time).toLocaleString());
+		}
+	}
+	
+	// Process workers
+	if (history.workers) {
+		var workerListLen = history.workers.length;
+		
+		for (var w = 0; w < workerListLen; w++) {
+			var workerListData = history.workers[w];
+			
+			var date = new Date(workerListData._id);
+			
+			var workerLen = workerListData.workers.length;
+			
+			for (var i = 0; i < workerLen; i++) {
+				var workerData = workerListData.workers[i];
 				
-				HISTORICAL_DATA.SUMMARY.payments.push([ date.getTime(), getFloat(payment.amount) ]);
+				var username = workerData._id;
+				var hashrate = workerData.hashrate;
+				var khashrate = hashrate / 1000.0;
+				
+				// Create the data object if it doesn't exist yet
+				if (!HISTORICAL_DATA.SUMMARY.workers.hasOwnProperty(username)) {
+					HISTORICAL_DATA.SUMMARY.workers[username] = [];
+				}
+				
+				HISTORICAL_DATA.SUMMARY.workers[username].push([date.getTime(), khashrate]);
 			}
 		}
 	}
+
+	//Process payments
+	if (history.payments) {
+		var payLen = history.payments.length;
+		for (var p = 0; p < payLen; p++) {
+			var payment = history.payments[p];
+			var date = new Date(payment.time);
+			
+			HISTORICAL_DATA.SUMMARY.payments.push([ date.getTime(), getFloat(payment.amount) ]);
+		}
+	}
+}
+
+function getShortUsername(username) {
+	var split = username.split('_');
+	
+	if (split.length > 1) {
+		return split[split.length-1];
+	}
+	
+	var usernameLength = username.length;
+	
+	if (usernameLength > 8) {
+		usernameLength = 8;
+	} else if (usernameLength < 8) {
+		usernameLength = usernameLength - 1;
+	}
+	
+	return username.substring(0, usernameLength); 
 }
 
 function convertUTCDateToLocalDate(date) {
@@ -914,6 +872,16 @@ function clearHistoricalHashRate() {
 	//DATA_RANGE.HASHRATE.lastValue = new Date();
 	
 	HISTORICAL_DATA.CHARTS.hashRate = [];
+	HISTORICAL_DATA.CHARTS.workers = {};
+}
+
+function clearHistoricalHashRateWorkerSummaries() {
+	// Clear the series' generated for worker data
+	for (var username in WORKER_HASHRATE_SERIES.HASHRATE) {
+		WORKER_HASHRATE_SERIES.HASHRATE[username].remove(false);
+	}
+	WORKER_HASHRATE_SERIES.HASHRATE = {};
+	WORKER_HASHRATE_SERIES.HASHRATE_COUNT = 0;
 }
 
 function clearHistoricalBalances() {
@@ -936,6 +904,16 @@ function clearSummary() {
 	HISTORICAL_DATA.SUMMARY.unconverted = [];
 	HISTORICAL_DATA.SUMMARY.payments = [];
 	HISTORICAL_DATA.SUMMARY.hashRate = [];
+	HISTORICAL_DATA.SUMMARY.workers = {};
+}
+
+function clearSummaryWorkerSeries() {
+	// Clear the series' generated for worker data
+	for (var username in WORKER_HASHRATE_SERIES.SUMMARY) {
+		WORKER_HASHRATE_SERIES.SUMMARY[username].remove(false);
+	}
+	WORKER_HASHRATE_SERIES.SUMMARY = {};
+	WORKER_HASHRATE_SERIES.SUMMARY_COUNT = 0;
 }
 
 function doUpdate() {
@@ -1026,8 +1004,9 @@ function checkLoaded() {
 	if (LOADING.hashRate === STATES.LOADED) {
 		LOADING.hashRate = STATES.READY;
 		
-		replotHistoricalGraph();
-		replotSummaryChart();
+		clearHistoricalHashRateWorkerSummaries();
+		
+		replotHashrateGraph();
 		
 		hideHashRateLoading();
 		enableTimeScaleButtons('hashrate');
@@ -1045,7 +1024,9 @@ function checkLoaded() {
 	
 	if (LOADING.summary === STATES.LOADED) {
 		LOADING.summary = STATES.READY;
-
+		
+		clearSummaryWorkerSeries();
+		
 		replotSummaryChart();
 		
 		hideSummaryLoading();
@@ -1053,8 +1034,28 @@ function checkLoaded() {
 	}
 }
 
-function replotHistoricalGraph() {
+function replotHashrateGraph() {
 	GRAPHS.historicalHashrate.series[0].setData(HISTORICAL_DATA.CHARTS.hashRate, false);
+	
+	// Set worker data
+	for (var username in HISTORICAL_DATA.CHARTS.workers) {
+		// Create the series if it doesn't exist
+		if (!WORKER_HASHRATE_SERIES.HASHRATE.hasOwnProperty(username)) {
+			var options = {
+					name: getShortUsername(username),
+					color: getSeriesColor(WORKER_HASHRATE_SERIES.HASHRATE_COUNT++, 8)
+			};
+			WORKER_HASHRATE_SERIES.HASHRATE[username] = GRAPHS.historicalHashrate.addSeries($.extend(true, {}, WORKER_SERIES_BASE.HASHRATE_CHART, options), false, false);
+		}
+		
+		var series = WORKER_HASHRATE_SERIES.HASHRATE[username];
+		var data = HISTORICAL_DATA.CHARTS.workers[username];
+		
+		series.setData(data, false);
+	}
+	
+	updateHashrateVisibility();
+	
 	GRAPHS.historicalHashrate.redraw();
 }
 
@@ -1069,10 +1070,30 @@ function replotBalanceGraph() {
 
 function replotSummaryChart() {
 	GRAPHS.summaryChart.series[0].setData(HISTORICAL_DATA.SUMMARY.sent, false);
-	GRAPHS.summaryChart.series[1].setData(HISTORICAL_DATA.SUMMARY.confirmed, false);
-	GRAPHS.summaryChart.series[2].setData(HISTORICAL_DATA.SUMMARY.unconverted, false);
+	GRAPHS.summaryChart.series[1].setData(HISTORICAL_DATA.SUMMARY.unconverted, false);
+	GRAPHS.summaryChart.series[2].setData(HISTORICAL_DATA.SUMMARY.confirmed, false);
 	GRAPHS.summaryChart.series[3].setData(HISTORICAL_DATA.SUMMARY.payments, false);
 	GRAPHS.summaryChart.series[4].setData(HISTORICAL_DATA.SUMMARY.hashRate, false);
+	
+	// Set worker data
+	for (var username in HISTORICAL_DATA.SUMMARY.workers) {
+		// Create the series if it doesn't exist
+		if (!WORKER_HASHRATE_SERIES.SUMMARY.hasOwnProperty(username)) {
+			var options = {
+					name: getShortUsername(username),
+					color: getSeriesColor(WORKER_HASHRATE_SERIES.SUMMARY_COUNT++, 8)
+			};
+			WORKER_HASHRATE_SERIES.SUMMARY[username] = GRAPHS.summaryChart.addSeries($.extend(true, {}, WORKER_SERIES_BASE.SUMMARY, options), false, false);
+		}
+		
+		var series = WORKER_HASHRATE_SERIES.SUMMARY[username];
+		var data = HISTORICAL_DATA.SUMMARY.workers[username];
+		
+		series.setData(data, false);
+	}
+	
+	updateSummaryVisibility();
+	
 	GRAPHS.summaryChart.redraw();
 }
 
@@ -1080,6 +1101,8 @@ function reflowGraphs() {
 	GRAPHS.historicalHashrate.reflow();
 	GRAPHS.historicalBalances.reflow();
 	GRAPHS.summaryChart.reflow();
+	
+	GRAPHS.summaryChart.setSize(GRAPHS.summaryChart.width, $(window).height() - 180);
 }
 
 
@@ -1336,13 +1359,13 @@ function formatHashrate(rawHR) {
 		results["desc"] = "kilohashes per second";
 	} else if (rawHR < 1000 * 1000 * 1000) {
 		results["valueStr"] = sprintf(hashrateDecimalFormatString, rawHR / 1000 / 1000);
-		results["shortRateStr"] = "mH/s";
-		results["longRateStr"] = "mHash/s";
+		results["shortRateStr"] = "MH/s";
+		results["longRateStr"] = "MHash/s";
 		results["desc"] = "megahashes per second";
 	} else {
 		results["valueStr"] = sprintf(hashrateDecimalFormatString, rawHR / 1000 / 1000 / 1000);
-		results["shortRateStr"] = "gH/s";
-		results["longRateStr"] = "gHash/s";
+		results["shortRateStr"] = "GH/s";
+		results["longRateStr"] = "GHash/s";
 		results["desc"] = "gigahashes per second";
 	}
 	
@@ -1350,6 +1373,14 @@ function formatHashrate(rawHR) {
 	results["longValueStr"] = results["valueStr"] + ' ' + results["longRateStr"];
 	
 	return results;
+}
+
+function setPreference(preference, value) {
+	$.cookie(preference, value, {expires: 365});
+}
+
+function getPreference(preference) {
+	return $.cookie(preference);
 }
 
 $.extend({
@@ -1371,6 +1402,301 @@ $.extend({
 
 Array.prototype.last = function() {
 	return this[this.length - 1];
+};
+
+/* accepts parameters
+ * h  Object = {h:x, s:y, v:z}
+ * OR 
+ * h, s, v
+*/
+function HSVtoRGB(h, s, v) {
+    var r, g, b, i, f, p, q, t;
+    if (h && s === undefined && v === undefined) {
+        s = h.s, v = h.v, h = h.h;
+    }
+    i = Math.floor(h * 6);
+    f = h * 6 - i;
+    p = v * (1 - s);
+    q = v * (1 - f * s);
+    t = v * (1 - (1 - f) * s);
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+    return {
+        r: Math.floor(r * 255),
+        g: Math.floor(g * 255),
+        b: Math.floor(b * 255)
+    };
+}
+
+function rgbToHex(r, g, b) {
+    return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+function getSeriesColor(index, count) {
+	var saturation = 0.95; // Saturation
+    var brightness = 0.8;  // Brightness
+    var hue = index / count;
+    
+	var rgb = HSVtoRGB(hue, saturation, brightness);
+	return rgbToHex(rgb.r, rgb.g, rgb.b);
+}
+
+
+//Graph setup
+var lineChartDefaults = {
+ 	chart: {
+         type: 'spline'
+     },
+     title: {
+         text: null
+     },
+     xAxis: {
+     	type: 'datetime',
+         title: {
+             text: null
+         },
+	        dateTimeLabelFormats: {
+	            month: '%e. %b',
+	            year: '%b'
+	        }
+     },
+     yAxis: {
+     	min: 0
+     },
+     legend: {
+         enabled: true
+     }
+};
+
+//Historical hashrate overrides
+var historicalHashrateLineChart = {
+		yAxis: {
+         title: {
+             text: 'kHash/s'
+         }
+     },
+     series: [{
+         name: 'Hashrate',
+         data: [],
+         color: '#ff3333',
+         marker: {
+         	symbol: 'circle',
+         	radius: 2
+         }
+     }],
+     tooltip: {
+         valueSuffix: 'kH/s',
+         valueDecimals: 2
+     }
+};
+
+//Balance history override configuration
+var historicalBalanceLineChart = {
+	yAxis: {
+     title: {
+         text: 'btc'
+     }
+ },
+ series: [
+ {
+     name: 'Unconverted',
+     data: [],
+     color: '#a6bddb',
+     marker: {
+     	symbol: 'circle',
+     	radius: 2
+     }
+ },
+ {
+     name: 'Confirmed',
+     data: [],
+     color: '#74a9cf',
+     marker: {
+     	symbol: 'circle',
+     	radius: 2
+     }
+ },
+ {
+     name: 'Unsent',
+     data: [],
+     color: '#2b8cbe',
+     marker: {
+     	symbol: 'circle',
+     	radius: 2
+     }
+ },
+ {
+     name: 'Sent',
+     data: [],
+     color: '#045a8d',
+     marker: {
+     	symbol: 'circle',
+     	radius: 2
+     }
+ },
+ {
+     name: 'Payments',
+     data: [],
+     color: '#74c476',
+     marker: {
+     	symbol: 'circle',
+     	radius: 2
+     }
+ }
+ ],
+ tooltip: {
+     valuePrefix: '฿',
+     valueDecimals: 8
+ }
+};
+
+var summaryChart = {
+	title : {
+		text : null
+	},
+	legend : {
+		enabled : true
+	},
+	xAxis : {
+		type : 'datetime',
+		title : {
+			text : null
+		},
+		dateTimeLabelFormats : {
+			month : '%e. %b',
+			year : '%b'
+		}
+	},
+	yAxis : [ {
+		title : {
+			text : 'Bitcoin'
+		},
+		plotLines : [ {
+			color : '#fd8d3c',
+			width : 2,
+			value : 0.01,
+			label : 'Payout',
+			zIndex : 5,
+			dashStyle: 'dash'
+		} ],
+		min: 0
+	}, {
+		title : {
+			text : 'kHash/s'
+		},
+		min: 0,
+		opposite : true
+	} ],
+	plotOptions : {
+		areaspline : {
+			fillOpacity : 0.8,
+			stacking : 'normal'
+		}
+	},
+	series : [ {
+		name : 'Sent',
+		type : 'areaspline',
+		yAxis : 0,
+		data : [],
+		color : '#6baed6',
+		marker : {
+			symbol : 'circle',
+			radius : 2
+		},
+		tooltip : {
+			valuePrefix : '฿',
+			valueDecimals : 8
+		}
+	}, {
+		name : 'Unconverted',
+		type : 'areaspline',
+		yAxis : 0,
+		data : [],
+		color : '#3182bd',
+		marker : {
+			symbol : 'circle',
+			radius : 2
+		},
+		tooltip : {
+			valuePrefix : '฿',
+			valueDecimals : 8
+		}
+	}, {
+		name : 'Confirmed',
+		type : 'areaspline',
+		yAxis : 0,
+		data : [],
+		color : '#08519c',
+		marker : {
+			symbol : 'circle',
+			radius : 2
+		},
+		tooltip : {
+			valuePrefix : '฿',
+			valueDecimals : 8
+		}
+	}, {
+     name: 'Payments',
+     type : 'spline',
+     yAxis : 0,
+     data: [],
+     color: '#74c476',
+     marker: {
+     	symbol: 'circle',
+     	radius: 2
+     },
+		tooltip : {
+			valuePrefix : '฿',
+			valueDecimals : 8
+		}
+ }, {
+		name : 'Hashrate',
+		type : 'spline',
+		yAxis : 1,
+		data : [],
+		color : '#ff0a00',
+		marker : {
+			symbol : 'circle',
+			radius : 2
+		},
+		tooltip : {
+			valueSuffix : 'kH/s',
+			valueDecimals : 2
+		}
+	} ]
+};
+
+var WORKER_SERIES_BASE = {
+	HASHRATE_CHART: {
+		data: [],
+		dashStyle: 'ShortDot',
+     color: '#ff3333',
+     marker: {
+     	symbol: 'circle',
+     	radius: 2
+     }
+	},
+	SUMMARY: {
+		type : 'spline',
+		dashStyle: 'ShortDot',
+		yAxis : 1,
+		data : [],
+		color : '#ff0a00',
+		marker : {
+			symbol : 'circle',
+			radius : 2
+		},
+		tooltip : {
+			valueSuffix : 'kH/s',
+			valueDecimals : 2
+		}
+	}
 };
 
 THEMES["nighttime"].charts = {
