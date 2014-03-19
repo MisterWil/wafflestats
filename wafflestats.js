@@ -44,6 +44,9 @@ var rclient = redis.createClient(config.redis.port, config.redis.address);
 // Pass config to notifications for AWS setup
 require('./plugins/notifications.js').setAwsConfig(config.aws);
 
+// Pass redis client to notifications
+require('./plugins/notifications.js').setRedisClient(rclient);
+
 if ('development' == app.get('env')) {
 	app.use(express.logger('dev'));
 	app.use(express.errorHandler());
@@ -61,6 +64,7 @@ Fetch.setRedisClient(rclient);
 var index = require('./routes/index')();
 var current = require('./routes/current')(app, rclient);
 var historical = require('./routes/historical')(app, rclient);
+var historicalv2 = require('./routes/historical_v2')(app, rclient);
 var metrics = require('./routes/metrics')(app, rclient);
 var notifications = require('./routes/notifications')(app, rclient);
 var payments = require('./routes/payments')(app, rclient);
@@ -98,6 +102,10 @@ app.get('/current/:address', current.temp_api);
 app.get('/historical/:address/:resolution/:range', historical.granularHistory);
 app.get('/historical/hashRate/:address/:resolution/:range', historical.granularHashRate);
 app.get('/historical/balances/:address/:resolution/:range', historical.granularBalances);
+
+app.get('/historical/v2/:address/:resolution/:range', historicalv2.granularHistory);
+app.get('/historical/v2/hashRate/:address/:resolution/:range', historicalv2.granularHashRate);
+app.get('/historical/v2/balances/:address/:resolution/:range', historicalv2.granularBalances);
 
 app.get('/notifications/:address', notifications.get);
 app.post('/notifications/:address', notifications.post);
