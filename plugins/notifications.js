@@ -9,11 +9,16 @@ var Payment = mongoose.model('Payment');
 var jade = require('jade');
 var fs = require('fs');
 
+var rclient = null;
+
 // This was a stupid big where if I didn't pass the config to the new SES instance then
 // I would not be connected to the right region. Who the fuck knows why!
 var aws = require('aws-sdk');
 var ses = new aws.SES();
 
+var DEFAULT_THROTTLE_SECONDS = 30; // Number of seconds to limit any specific email/subject from being sent
+
+var PAYOUT_EMAIL_MINUTES = 60; // Only send a payout notification email every 60 minutes
 var HASHRATE_EMAIL_MINUTES = 60; // Only send a hashrate notification email every 60 minutes
 
 // Only accept hashRate averages if we have at least 80% of the number of points that happen in the timeframe.
@@ -33,6 +38,11 @@ function setAwsConfig(config) {
 	});
 }
 exports.setAwsConfig = setAwsConfig;
+
+function setRedisClient(redisClient) {
+	rclient = redisClient;
+}
+exports.setRedisClient = setRedisClient;
 
 function update(address, data) {
 	updatePayouts(address, data);
@@ -93,7 +103,8 @@ function sendPaymentEmails(payment, callback) {
 		    	        time: payment.time
 		    	    });
 		    		
-		    		sendEmail(notifications[i].email, 'WAFFLEStats Payment Notification', html, callback);
+		    		var throttleSeconds = PAYOUT_EMAIL_MINUTES * 60;
+		    		sendEmail(notifications[i].email, 'WAFFLEStats Payment Notification', html, callback, throttleSeconds);
 		    	}
 	    	}
 	    });
@@ -114,7 +125,8 @@ function sendHashrateEmail(notification, hashRate, callback) {
 	        threshold: sprintf("%.2f kH/s", notification.threshold)
 	    });
 
-		sendEmail(notification.email, 'WAFFLEStats Hashrate Notification', html, callback);
+	    var throttleSeconds = HASHRATE_EMAIL_MINUTES * 60;
+		sendEmail(notification.email, 'WAFFLEStats Hashrate Notification', html, callback, throttleSeconds);
 
 	} catch (err) {
 		callback(err, null);
@@ -255,27 +267,47 @@ function getTemplate(template) {
 	});
 }
 
-function sendEmail(toEmail, subject, html, callback) {
-	ses.sendEmail( {
-        Source: 'waffles@wilschrader.com',
-        Destination: {
-            ToAddresses: [toEmail]
-        },
-        Message: {
-            Subject: {
-                Data: subject
-            },
-            Body: {
-               Html: {
-                   Data: html
-               }
-            }
-        }
-    }, function (err, data) {
-    	if (err) {
-    		return callback(err, null);
-    	}
+function sendEmail(toEmail, subject, html, callback, throttleSeconds) {
+	if (!rclient) {
+		return callback("Redis Client Not Set - Server ID10T Error", null);
+	}
+	
+	if (!throttleSeconds) {
+		throttleSeconds = DEFAULT_THROTTLE_SECONDS;
+	}
+	
+	var key = toEmail + "_" + subject;
+	
+	rclient.setnx(key, Date.now(), function (err, result) {
+		if (result == 1) {
+			// Set throttle timeout and send email
+			rclient.expire(key, throttleSeconds);
+			
+			ses.sendEmail( {
+		        Source: 'wil@wafflestats.com',
+		        Destination: {
+		            ToAddresses: [toEmail]
+		        },
+		        Message: {
+		            Subject: {
+		                Data: subject
+		            },
+		            Body: {
+		               Html: {
+		                   Data: html
+		               }
+		            }
+		        }
+		    }, function (err, data) {
+		    	if (err) {
+		    		return callback(err, null);
+		    	}
 
-    	callback(null, data);
-    });
+		    	callback(null, data);
+		    });
+		} else {
+			// Email throttled!
+			callback(sprintf("Email throttled for email '%s' with subject '%s' for %d seconds.", toEmail, subject, throttleSeconds), null);
+		}
+	});
 }
