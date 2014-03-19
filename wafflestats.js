@@ -71,7 +71,7 @@ var payments = require('./routes/payments')(app, rclient);
 var statistics = require('./routes/statistics')(app, rclient);
 
 // Waffles Version Info
-app.set('wafflesVersion', '1.0');
+app.set('wafflesVersion', '1.1');
 
 // Flash!
 app.use(express.cookieParser());
