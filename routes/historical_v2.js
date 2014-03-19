@@ -86,7 +86,9 @@ var validRanges = [
 ];
 
 var invalidWorkerAggregationResolutions = [
-	SCALE.ONE_MINUTE
+	SCALE.ONE_MINUTE,
+	SCALE.FIVE_MINUTE,
+	SCALE.THIRTY_MINUTE,
 ];
 
 var rangesAbove = 4, onlyAcceptResolutionsAbove = 2; // If a range is larger than ONE_DAY, only allow resolutions above THIRTY_MINUTE
