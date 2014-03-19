@@ -401,11 +401,9 @@ function createGroupById(resolution) {
 	}
 
 	if (appendMinutes) {
-		var resVal = 1;
+		var resVal = 5;
 
-		if (resolution === FIVE_MINUTE) {
-			resVal = 5;
-		} else if (resolution === THIRTY_MINUTE) {
+		if (resolution === SCALE.THIRTY_MINUTE) {
 			resVal = 30;
 		}
 
