@@ -11,7 +11,7 @@
 	
 	"redis" : {
 		"address": "localhost",
-		"port": 6397
+		"port": 6379
 	},
 	
 	"mongo" : {
