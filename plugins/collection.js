@@ -24,6 +24,11 @@ var options = {
  */
 var CURRENT_DATA_EXPIRE_SECONDS = 55;
 
+/*
+ * Only store worker data if lastseen is greater than X amount of time ago.
+ */
+var WORKER_LASTSEEN_LIMIT = 1000 * 60 * 60 * 24 * 7;
+
 function setResources(expressApp, redisClient) {
 	app = expressApp;
 	rclient = redisClient;
@@ -108,8 +113,46 @@ function cacheResult(address, result) {
 
 function saveHistorical(address, data) {
 	if (data !== undefined && data.hash_rate !== undefined) {
+		// Parse worker hashrates
+		var workerHistory = new Array();
+		
+		var WORKER_CUTOFF = Date.now() - WORKER_LASTSEEN_LIMIT;
+		
+		if (data.worker_hashrates) {
+			var workerLen = data.worker_hashrates.length;
+			
+			for (var i = 0; i < workerLen; i++) {
+				var workerData = data.worker_hashrates[i];
+				
+				try {
+					var username = workerData.username;
+			        var workerHashrate = parseInt(workerData.hashrate);
+			        var workerLastSeen = new Date(workerData.last_seen * 1000); // Convert unix time in seconds to milliseconds
+			    } catch (err) {
+		            return log.error(err);
+		        }
+			    
+			    if (isNaN(workerHashrate)) {
+			        log.error("Detected NaN on worker hashrate, ignoring worker");
+			        continue;
+			    }
+			    
+			    if (workerLastSeen.getTime() < WORKER_CUTOFF) {
+			    	continue;
+			    }
+			    
+			    var workerObj = {
+			    		username: username,
+			    		hashRate: workerHashrate,
+			    		lastSeen: workerLastSeen
+			    };
+			    
+			    workerHistory.push(workerObj);
+			}
+		}
+		
 	    try {
-	        var hashrate = parseInt(data.hash_rate);
+	        var hashrate = Number(data.hash_rate);
     	    var sent = Number(data.balances.sent);
     	    var confirmed = Number(data.balances.confirmed);
     	    var unconverted = Number(data.balances.unconverted);
@@ -124,6 +167,7 @@ function saveHistorical(address, data) {
 		var hist = {
 			address : address,
 			hashRate : hashrate,
+			workerHashrates: workerHistory,
 			balances : {
 				sent : sent,
 				confirmed : confirmed,
