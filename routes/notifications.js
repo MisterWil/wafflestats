@@ -159,8 +159,6 @@ function setupNotifications(req, res) {
     var address = req.params.address;
     var email = req.body.email;
     
-    console.log(address + ' - ' + email);
-    
     if (address === undefined) {
         return res.redirect('/');
     } else if (!validateEmail(email)) {
@@ -208,7 +206,7 @@ function sendSetupEmail(req, res, notification) {
 	Notifications.sendSetupEmail(notification, function (err, response) {
 		if (err) {
 			log.error(err);
-			req.flash('error', 'Sorry, but emails seem to be broken right now. Let us know! We will try and fix it soon!');
+			req.flash('error', "Emails Broken! Error given: " + err);
             return res.redirect('/notifications/' + notification.address);
 		}
 		
