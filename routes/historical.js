@@ -266,8 +266,6 @@ function getAggregatePipeline(btcAddr, resolution, fromDate, includeHashrate,
 			}
 		}
 	}, {
-		$project : projection
-	}, {
 		$group : group
 	}, {
 		$sort : sortBy
