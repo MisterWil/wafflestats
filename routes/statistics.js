@@ -111,6 +111,11 @@ function processAggregation(req, res) {
 					
 					var btcPerDayPerMhash = btcPerDay / hashrateData.avgHashrate * 1000000;
 					
+					// Sometimes this value is null because of division-by-zero. This is a lazy fix.
+					if (!btcPerDayPerMhash) {
+						btcPerDayPerMhash = 0;
+					}
+					
 					var statistics = {
 							success: true,
 							avgHashrate: hashrateData.avgHashrate,
