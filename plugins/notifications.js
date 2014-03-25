@@ -95,16 +95,20 @@ function sendPaymentEmails(payment, callback) {
 	    	if (notifications) {
 		    	var notificationsLen = notifications.length;
 		    	for (var i = 0; i < notificationsLen; i++) {
+		    		var email = notifications[i].email;
+		    		var hashid = notifications[i].getHashId();
 		    		var html = emailTemplate({
-		    			hashid: notifications[i].getHashId(),
+		    			hashid: hashid,
 		    	        address: payment.address,
 		    	        txn: payment.txn,
 		    	        amount: payment.amount,
 		    	        time: payment.time
 		    	    });
 		    		
+		    		
 		    		var throttleSeconds = PAYOUT_EMAIL_MINUTES * 60;
-		    		sendEmail(notifications[i].email, 'WAFFLEStats Payment Notification', html, callback, throttleSeconds);
+		    		var key = sprintf("PAYMENT-%s", hashid);
+		    		sendEmail(email, 'WAFFLEStats Payment Notification', html, callback, throttleSeconds, key);
 		    	}
 	    	}
 	    });
@@ -124,9 +128,10 @@ function sendHashrateEmail(notification, hashRate, callback) {
 	        averageMinutesHashrate: sprintf("%.2f kH/s", hashRate),
 	        threshold: sprintf("%.2f kH/s", notification.threshold)
 	    });
-
+	    
 	    var throttleSeconds = HASHRATE_EMAIL_MINUTES * 60;
-		sendEmail(notification.email, 'WAFFLEStats Hashrate Notification', html, callback, throttleSeconds);
+	    var key = sprintf("HASHRATE-%s", notification.getHashId());
+		sendEmail(notification.email, 'WAFFLEStats Hashrate Notification', html, callback, throttleSeconds, key);
 
 	} catch (err) {
 		callback(err, null);
@@ -267,7 +272,7 @@ function getTemplate(template) {
 	});
 }
 
-function sendEmail(toEmail, subject, html, callback, throttleSeconds) {
+function sendEmail(toEmail, subject, html, callback, throttleSeconds, key) {
 	if (!rclient) {
 		return callback("Redis Client Not Set - Server ID10T Error", null);
 	}
@@ -276,7 +281,9 @@ function sendEmail(toEmail, subject, html, callback, throttleSeconds) {
 		throttleSeconds = DEFAULT_THROTTLE_SECONDS;
 	}
 	
-	var key = toEmail + "_" + subject;
+	if (!key) {
+		key = toEmail + "_" + subject;
+	}
 	
 	rclient.setnx(key, Date.now(), function (err, result) {
 		if (result == 1) {
@@ -307,7 +314,8 @@ function sendEmail(toEmail, subject, html, callback, throttleSeconds) {
 		    });
 		} else {
 			// Email throttled!
-			callback(sprintf("Email throttled for email '%s' with subject '%s' for %d seconds.", toEmail, subject, throttleSeconds), null);
+			var throttleMsg = sprintf("Email throttled for email '%s' with subject '%s' for %d seconds.", toEmail, subject, throttleSeconds);
+			callback(null, {warning: throttleMsg});
 		}
 	});
 }
