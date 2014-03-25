@@ -126,7 +126,7 @@ function updateAddress(address) {
 			});
 		}
 
-		resetFetch(true); // Rerun list instantly
+		resetFetch(false); // Rerun list instantly
 	});
 }
 

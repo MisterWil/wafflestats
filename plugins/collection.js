@@ -77,9 +77,9 @@ function getCurrentDataFromAPI(bitcoinAddress, callback) {
 		    processAPIData(bitcoinAddress, body, callback);
 		} else {
 			if (error) {
-				log.error("Collection.getCurrentDataFromAPI(" + bitcoinAddress + ") Error: " + error);
+				//log.error("Collection.getCurrentDataFromAPI(" + bitcoinAddress + ") Error: " + error);
 			} else if (response) {
-				log.error("Collection.getCurrentDataFromAPI(" + bitcoinAddress + ") Failed Response Code: " + response.statusCode);
+				//log.error("Collection.getCurrentDataFromAPI(" + bitcoinAddress + ") Failed Response Code: " + response.statusCode);
 			}
 
 		    callback("Remote API Unreachable", null);
